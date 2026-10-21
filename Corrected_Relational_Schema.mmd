@@ -1,0 +1,68 @@
+erDiagram
+    BUSINESS ||--o{ RENTAL_EQUIPMENT : lists
+    BUSINESS ||--o{ MANAGER : employs
+    MANAGER ||--o{ EMPLOYEE : supervises
+    CUSTOMER ||--o{ RESERVATION : makes
+    RENTAL_EQUIPMENT ||--o{ RESERVATION : reserved_in
+    RESERVATION ||--o| PAYMENT : receives
+    ADMIN ||--o{ DEFINES_ACCESS : assigns
+    EMPLOYEE ||--o{ DEFINES_ACCESS : receives
+    ADMIN ||--o{ ADMIN_PRIVILEGES : holds
+    BUSINESS {
+        integer business_id PK
+        varchar_120 business_name
+        varchar_255 address
+    }
+    RENTAL_EQUIPMENT {
+        integer equipment_id PK
+        varchar_60 equipment_type
+        varchar_20 status
+        integer business_id FK
+    }
+    CUSTOMER {
+        integer customer_id PK
+        varchar_80 first_name
+        varchar_80 last_name
+        varchar_254 email UK
+    }
+    RESERVATION {
+        integer reservation_id PK
+        integer equipment_id FK
+        integer customer_id FK
+        varchar_20 status
+        date checkout_date
+        date due_date
+    }
+    PAYMENT {
+        integer payment_id PK
+        integer reservation_id FK, UK
+        numeric_10_2 amount
+        date payment_date
+    }
+    MANAGER {
+        integer manager_id PK
+        varchar_80 first_name
+        varchar_80 last_name
+        varchar_254 email UK
+        integer business_id FK
+    }
+    EMPLOYEE {
+        integer employee_id PK
+        varchar_80 first_name
+        varchar_80 last_name
+        varchar_254 email UK
+        integer manager_id FK
+    }
+    ADMIN {
+        integer admin_id PK
+        varchar_80 first_name
+        varchar_80 last_name
+    }
+    DEFINES_ACCESS {
+        integer admin_id PK, FK
+        integer employee_id PK, FK
+    }
+    ADMIN_PRIVILEGES {
+        integer admin_id PK, FK
+        varchar_60 privilege PK
+    }

@@ -1,0 +1,164 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1900" height="1660" viewBox="0 0 1900 1660">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#4f6680"/></marker></defs>
+<rect width="1900" height="1660" fill="#f8fafc"/>
+<style>text{font-family:Arial,sans-serif;fill:#172c42}.field{font-family:Menlo,Consolas,monospace;font-size:20px}.type{font-family:Menlo,Consolas,monospace;font-size:17px;fill:#4b6177}.title{font-size:24px;font-weight:700;fill:white}.edge{fill:none;stroke:#4f6680;stroke-width:3;marker-end:url(#arrow)}.note{font-size:20px;fill:#4b6177}</style>
+<text x="60" y="57" font-size="36" font-weight="700">Outdoor Equipment Rental Management System</text>
+<text x="60" y="99" font-size="22">CS4604 · Group 9 · Corrected relational schema · PostgreSQL · PK = primary key, FK = foreign key, UQ = unique</text>
+
+<path class="edge" d="M310 520 V330"/>
+<rect x="62" y="406" width="320" height="34" rx="6" fill="#f8fafc"/>
+<text class="note" x="70" y="430">0..N equipment / 1 business</text>
+<path class="edge" d="M1340 270 H560"/>
+<rect x="762" y="225" width="335" height="34" rx="6" fill="#f8fafc"/>
+<text class="note" x="770" y="249">0..N managers / 1 business</text>
+<path class="edge" d="M700 635 H560"/>
+<rect x="559" y="590" width="137" height="34" rx="6" fill="#f8fafc"/>
+<text class="note" x="567" y="614">equipment_id</text>
+<path class="edge" d="M700 720 H630 V1065 H560"/>
+<rect x="562" y="850" width="140" height="34" rx="6" fill="#f8fafc"/>
+<text class="note" x="570" y="874">customer_id</text>
+<path class="edge" d="M950 960 V805"/>
+<rect x="960" y="866" width="338" height="34" rx="6" fill="#f8fafc"/>
+<text class="note" x="968" y="890">0..1 payment / 1 reservation</text>
+<path class="edge" d="M1590 520 V400"/>
+<rect x="1357" y="446" width="335" height="34" rx="6" fill="#f8fafc"/>
+<text class="note" x="1365" y="470">0..N employees / 1 manager</text>
+<path class="edge" d="M1590 960 V770"/>
+<rect x="1600" y="840" width="160" height="34" rx="6" fill="#f8fafc"/>
+<text class="note" x="1608" y="864">employee_id</text>
+<path class="edge" d="M1590 1110 V1330"/>
+<rect x="1600" y="1196" width="120" height="34" rx="6" fill="#f8fafc"/>
+<text class="note" x="1608" y="1220">admin_id</text>
+<path class="edge" d="M1200 1405 H1340"/>
+<rect x="1202" y="1360" width="120" height="34" rx="6" fill="#f8fafc"/>
+<text class="note" x="1210" y="1384">admin_id</text>
+<rect x="60" y="150" width="500" height="180" rx="10" fill="white" stroke="#bdcbd9" stroke-width="2"/>
+<path d="M70 150 H550 Q560 150 560 160 V206 H60 V160 Q60 150 70 150Z" fill="#203f5c"/>
+<text class="title" x="80" y="187">BUSINESS</text>
+<text class="field" x="78" y="238">business_id</text>
+<text class="type" text-anchor="end" x="542" y="238">INTEGER PK</text>
+<rect x="61" y="247" width="498" height="35" fill="#f1f5f9"/>
+<text class="field" x="78" y="273">business_name</text>
+<text class="type" text-anchor="end" x="542" y="273">VARCHAR(120)</text>
+<text class="field" x="78" y="308">address</text>
+<text class="type" text-anchor="end" x="542" y="308">VARCHAR(255)</text>
+<rect x="1340" y="150" width="500" height="250" rx="10" fill="white" stroke="#bdcbd9" stroke-width="2"/>
+<path d="M1350 150 H1830 Q1840 150 1840 160 V206 H1340 V160 Q1340 150 1350 150Z" fill="#203f5c"/>
+<text class="title" x="1360" y="187">MANAGER</text>
+<text class="field" x="1358" y="238">manager_id</text>
+<text class="type" text-anchor="end" x="1822" y="238">INTEGER PK</text>
+<rect x="1341" y="247" width="498" height="35" fill="#f1f5f9"/>
+<text class="field" x="1358" y="273">first_name</text>
+<text class="type" text-anchor="end" x="1822" y="273">VARCHAR(80)</text>
+<text class="field" x="1358" y="308">last_name</text>
+<text class="type" text-anchor="end" x="1822" y="308">VARCHAR(80)</text>
+<rect x="1341" y="317" width="498" height="35" fill="#f1f5f9"/>
+<text class="field" x="1358" y="343">email</text>
+<text class="type" text-anchor="end" x="1822" y="343">VARCHAR(254) UQ</text>
+<text class="field" x="1358" y="378">business_id</text>
+<text class="type" text-anchor="end" x="1822" y="378">INTEGER FK</text>
+<rect x="60" y="520" width="500" height="215" rx="10" fill="white" stroke="#bdcbd9" stroke-width="2"/>
+<path d="M70 520 H550 Q560 520 560 530 V576 H60 V530 Q60 520 70 520Z" fill="#203f5c"/>
+<text class="title" x="80" y="557">RENTAL_EQUIPMENT</text>
+<text class="field" x="78" y="608">equipment_id</text>
+<text class="type" text-anchor="end" x="542" y="608">INTEGER PK</text>
+<rect x="61" y="617" width="498" height="35" fill="#f1f5f9"/>
+<text class="field" x="78" y="643">equipment_type</text>
+<text class="type" text-anchor="end" x="542" y="643">VARCHAR(60)</text>
+<text class="field" x="78" y="678">status</text>
+<text class="type" text-anchor="end" x="542" y="678">VARCHAR(20)</text>
+<rect x="61" y="687" width="498" height="35" fill="#f1f5f9"/>
+<text class="field" x="78" y="713">business_id</text>
+<text class="type" text-anchor="end" x="542" y="713">INTEGER FK</text>
+<rect x="700" y="520" width="500" height="285" rx="10" fill="white" stroke="#bdcbd9" stroke-width="2"/>
+<path d="M710 520 H1190 Q1200 520 1200 530 V576 H700 V530 Q700 520 710 520Z" fill="#203f5c"/>
+<text class="title" x="720" y="557">RESERVATION</text>
+<text class="field" x="718" y="608">reservation_id</text>
+<text class="type" text-anchor="end" x="1182" y="608">INTEGER PK</text>
+<rect x="701" y="617" width="498" height="35" fill="#f1f5f9"/>
+<text class="field" x="718" y="643">equipment_id</text>
+<text class="type" text-anchor="end" x="1182" y="643">INTEGER FK</text>
+<text class="field" x="718" y="678">customer_id</text>
+<text class="type" text-anchor="end" x="1182" y="678">INTEGER FK</text>
+<rect x="701" y="687" width="498" height="35" fill="#f1f5f9"/>
+<text class="field" x="718" y="713">status</text>
+<text class="type" text-anchor="end" x="1182" y="713">VARCHAR(20)</text>
+<text class="field" x="718" y="748">checkout_date</text>
+<text class="type" text-anchor="end" x="1182" y="748">DATE</text>
+<rect x="701" y="757" width="498" height="35" fill="#f1f5f9"/>
+<text class="field" x="718" y="783">due_date</text>
+<text class="type" text-anchor="end" x="1182" y="783">DATE</text>
+<rect x="1340" y="520" width="500" height="250" rx="10" fill="white" stroke="#bdcbd9" stroke-width="2"/>
+<path d="M1350 520 H1830 Q1840 520 1840 530 V576 H1340 V530 Q1340 520 1350 520Z" fill="#203f5c"/>
+<text class="title" x="1360" y="557">EMPLOYEE</text>
+<text class="field" x="1358" y="608">employee_id</text>
+<text class="type" text-anchor="end" x="1822" y="608">INTEGER PK</text>
+<rect x="1341" y="617" width="498" height="35" fill="#f1f5f9"/>
+<text class="field" x="1358" y="643">first_name</text>
+<text class="type" text-anchor="end" x="1822" y="643">VARCHAR(80)</text>
+<text class="field" x="1358" y="678">last_name</text>
+<text class="type" text-anchor="end" x="1822" y="678">VARCHAR(80)</text>
+<rect x="1341" y="687" width="498" height="35" fill="#f1f5f9"/>
+<text class="field" x="1358" y="713">email</text>
+<text class="type" text-anchor="end" x="1822" y="713">VARCHAR(254) UQ</text>
+<text class="field" x="1358" y="748">manager_id</text>
+<text class="type" text-anchor="end" x="1822" y="748">INTEGER FK</text>
+<rect x="60" y="960" width="500" height="215" rx="10" fill="white" stroke="#bdcbd9" stroke-width="2"/>
+<path d="M70 960 H550 Q560 960 560 970 V1016 H60 V970 Q60 960 70 960Z" fill="#203f5c"/>
+<text class="title" x="80" y="997">CUSTOMER</text>
+<text class="field" x="78" y="1048">customer_id</text>
+<text class="type" text-anchor="end" x="542" y="1048">INTEGER PK</text>
+<rect x="61" y="1057" width="498" height="35" fill="#f1f5f9"/>
+<text class="field" x="78" y="1083">first_name</text>
+<text class="type" text-anchor="end" x="542" y="1083">VARCHAR(80)</text>
+<text class="field" x="78" y="1118">last_name</text>
+<text class="type" text-anchor="end" x="542" y="1118">VARCHAR(80)</text>
+<rect x="61" y="1127" width="498" height="35" fill="#f1f5f9"/>
+<text class="field" x="78" y="1153">email</text>
+<text class="type" text-anchor="end" x="542" y="1153">VARCHAR(254) UQ</text>
+<rect x="700" y="960" width="500" height="215" rx="10" fill="white" stroke="#bdcbd9" stroke-width="2"/>
+<path d="M710 960 H1190 Q1200 960 1200 970 V1016 H700 V970 Q700 960 710 960Z" fill="#203f5c"/>
+<text class="title" x="720" y="997">PAYMENT</text>
+<text class="field" x="718" y="1048">payment_id</text>
+<text class="type" text-anchor="end" x="1182" y="1048">INTEGER PK</text>
+<rect x="701" y="1057" width="498" height="35" fill="#f1f5f9"/>
+<text class="field" x="718" y="1083">reservation_id</text>
+<text class="type" text-anchor="end" x="1182" y="1083">INTEGER FK UQ</text>
+<text class="field" x="718" y="1118">amount</text>
+<text class="type" text-anchor="end" x="1182" y="1118">NUMERIC(10,2)</text>
+<rect x="701" y="1127" width="498" height="35" fill="#f1f5f9"/>
+<text class="field" x="718" y="1153">payment_date</text>
+<text class="type" text-anchor="end" x="1182" y="1153">DATE</text>
+<rect x="1340" y="960" width="500" height="145" rx="10" fill="white" stroke="#bdcbd9" stroke-width="2"/>
+<path d="M1350 960 H1830 Q1840 960 1840 970 V1016 H1340 V970 Q1340 960 1350 960Z" fill="#203f5c"/>
+<text class="title" x="1360" y="997">DEFINES_ACCESS</text>
+<text class="field" x="1358" y="1048">admin_id</text>
+<text class="type" text-anchor="end" x="1822" y="1048">INTEGER PK, FK</text>
+<rect x="1341" y="1057" width="498" height="35" fill="#f1f5f9"/>
+<text class="field" x="1358" y="1083">employee_id</text>
+<text class="type" text-anchor="end" x="1822" y="1083">INTEGER PK, FK</text>
+<rect x="700" y="1330" width="500" height="145" rx="10" fill="white" stroke="#bdcbd9" stroke-width="2"/>
+<path d="M710 1330 H1190 Q1200 1330 1200 1340 V1386 H700 V1340 Q700 1330 710 1330Z" fill="#203f5c"/>
+<text class="title" x="720" y="1367">ADMIN_PRIVILEGES</text>
+<text class="field" x="718" y="1418">admin_id</text>
+<text class="type" text-anchor="end" x="1182" y="1418">INTEGER PK, FK</text>
+<rect x="701" y="1427" width="498" height="35" fill="#f1f5f9"/>
+<text class="field" x="718" y="1453">privilege</text>
+<text class="type" text-anchor="end" x="1182" y="1453">VARCHAR(60) PK</text>
+<rect x="1340" y="1330" width="500" height="180" rx="10" fill="white" stroke="#bdcbd9" stroke-width="2"/>
+<path d="M1350 1330 H1830 Q1840 1330 1840 1340 V1386 H1340 V1340 Q1340 1330 1350 1330Z" fill="#203f5c"/>
+<text class="title" x="1360" y="1367">ADMIN</text>
+<text class="field" x="1358" y="1418">admin_id</text>
+<text class="type" text-anchor="end" x="1822" y="1418">INTEGER PK</text>
+<rect x="1341" y="1427" width="498" height="35" fill="#f1f5f9"/>
+<text class="field" x="1358" y="1453">first_name</text>
+<text class="type" text-anchor="end" x="1822" y="1453">VARCHAR(80)</text>
+<text class="field" x="1358" y="1488">last_name</text>
+<text class="type" text-anchor="end" x="1822" y="1488">VARCHAR(80)</text>
+<text x="60" y="1360" class="note">Arrows: child FK → parent PK.</text>
+<text x="60" y="1400" class="note">Each child has exactly one referenced parent.</text>
+<text x="60" y="1440" class="note">Parents can have 0..N children, except</text>
+<text x="60" y="1480" class="note">RESERVATION → PAYMENT, which is 0..1.</text>
+<text x="60" y="1565" class="note">All attributes are NOT NULL. Each reservation covers one equipment item. An employee's business and access supervisor are derived through joins.</text>
+<text x="60" y="1605" class="note">Composite primary keys: DEFINES_ACCESS(admin_id, employee_id); ADMIN_PRIVILEGES(admin_id, privilege). See report for assumptions and check constraints.</text>
+</svg>

@@ -1,0 +1,14 @@
+# Python and local settings
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+.DS_Store
+
+# Local database files and logs
+work/
+group9_runtime/
+postgres_data/
+*.log
