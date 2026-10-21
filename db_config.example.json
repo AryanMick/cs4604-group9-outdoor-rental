@@ -1,0 +1,7 @@
+{
+  "host": "localhost",
+  "port": 5432,
+  "dbname": "outdoor_rental_group9",
+  "user": "YOUR_POSTGRESQL_USERNAME",
+  "password": "YOUR_POSTGRESQL_PASSWORD"
+}

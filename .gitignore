@@ -5,6 +5,7 @@ __pycache__/
 venv/
 .env
 .env.*
+db_config.json
 .DS_Store
 
 # Local database files and logs

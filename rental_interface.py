@@ -92,9 +92,11 @@ class RentalInterface(tk.Tk):
                 database, user, version, pid = cursor.fetchone()
             self.banner.configure(text=f"Connection established successfully  |  PostgreSQL {version}  |  Database: {database}",
                                   style="Connected.TLabel")
-            self.connection_info.set(f"Driver: psycopg2  |  User: {user}  |  Local Unix socket, port {db_tools.PORT}  |  Backend PID: {pid}  |  Checked: {datetime.now().astimezone():%Y-%m-%d %H:%M:%S %Z}")
+            host = self.connection.info.host
+            port = self.connection.info.port
+            self.connection_info.set(f"Driver: psycopg2  |  User: {user}  |  Host: {host}  |  Port: {port}  |  Backend PID: {pid}  |  Checked: {datetime.now().astimezone():%Y-%m-%d %H:%M:%S %Z}")
             return True
-        except psycopg2.Error as exc:
+        except (psycopg2.Error, RuntimeError) as exc:
             self.failed_connection(exc)
             return False
 
@@ -141,7 +143,7 @@ class RentalInterface(tk.Tk):
             self.table_title.set(f"rental.{table}  |  {len(rows)} rows")
             self.query.set(f"SELECT * FROM rental.{table} ORDER BY 1, 2;")
             self.test_connection()
-        except psycopg2.Error as exc:
+        except (psycopg2.Error, RuntimeError) as exc:
             self.tree.delete(*self.tree.get_children())
             self.table_title.set("Data unavailable")
             self.failed_connection(exc)
@@ -158,7 +160,7 @@ class RentalInterface(tk.Tk):
             self.table_title.set("All 10 base tables - live PostgreSQL row counts")
             self.query.set("SELECT count(*) FROM rental.<table>;  -- each table queried individually")
             self.test_connection()
-        except psycopg2.Error as exc:
+        except (psycopg2.Error, RuntimeError) as exc:
             self.failed_connection(exc)
 
     def close(self):

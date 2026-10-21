@@ -1,7 +1,7 @@
-"""Create a dedicated local PostgreSQL instance and load the Group 9 project.
+"""Load the Group 9 project using the PostgreSQL connection in db_config.json.
 
-No existing PostgreSQL cluster or database is changed. Runtime data lives in
-../work/group9_runtime, outside the submission files in outputs/.
+Without a config file, use a dedicated local instance on Unix systems.
+Its runtime data lives in ../work/group9_runtime.
 """
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ import sys
 import tempfile
 
 PACKAGE = Path(__file__).resolve().parent
+CONFIG_FILE = Path(os.environ.get("GROUP9_DB_CONFIG", PACKAGE / "db_config.json"))
 RUNTIME = Path(os.environ.get("GROUP9_RUNTIME_DIR", PACKAGE.parent / "work" / "group9_runtime"))
 DATA = RUNTIME / "postgres_data"
 PORT = 55439
@@ -44,12 +45,24 @@ def run_pg(name: str, *args: str, **kwargs):
     return subprocess.run([str(pg_bin() / name), *map(str, args)], check=True, **kwargs)
 
 
-def connection_parameters(dbname: str = DATABASE) -> dict:
-    return {"host": str(SOCKET), "port": PORT, "dbname": dbname,
-            "user": USER, "connect_timeout": 5, "application_name": "CS4604 Group 9"}
+def connection_parameters(dbname=None) -> dict:
+    if not CONFIG_FILE.is_file() and (os.name == "nt" or "GROUP9_DB_CONFIG" in os.environ):
+        raise RuntimeError("Copy db_config.example.json to db_config.json and enter your PostgreSQL connection details.")
+    parameters = {"host": str(SOCKET), "port": PORT, "dbname": DATABASE,
+                  "user": USER, "connect_timeout": 5, "application_name": "CS4604 Group 9"}
+    if CONFIG_FILE.is_file():
+        try:
+            settings = json.loads(CONFIG_FILE.read_text())
+            for key in ("host", "port", "dbname", "user", "password"):
+                parameters[key] = settings[key]
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            raise RuntimeError("Check db_config.json. Use the same fields as db_config.example.json.") from exc
+    if dbname is not None:
+        parameters["dbname"] = dbname
+    return parameters
 
 
-def connect(dbname: str = DATABASE):
+def connect(dbname=None):
     try:
         import psycopg2
     except ImportError as exc:
@@ -58,6 +71,10 @@ def connect(dbname: str = DATABASE):
 
 
 def start() -> None:
+    connection_parameters()
+    if CONFIG_FILE.is_file():
+        print("Using the PostgreSQL server from db_config.json.")
+        return
     RUNTIME.mkdir(parents=True, exist_ok=True)
     SOCKET.mkdir(mode=0o700, parents=True, exist_ok=True)
     SOCKET.chmod(0o700)
@@ -79,17 +96,18 @@ def start() -> None:
 
 def setup() -> None:
     start()
+    database = connection_parameters()["dbname"]
     connection = connect("postgres")
     try:
         connection.autocommit = True
         with connection.cursor() as cursor:
-            cursor.execute("SELECT 1 FROM pg_database WHERE datname = %s", (DATABASE,))
+            cursor.execute("SELECT 1 FROM pg_database WHERE datname = %s", (database,))
             exists = cursor.fetchone() is not None
         if not exists:
             # CREATE DATABASE cannot run in a transaction block.
             from psycopg2 import sql
             with connection.cursor() as cursor:
-                cursor.execute(sql.SQL("CREATE DATABASE {} TEMPLATE template0").format(sql.Identifier(DATABASE)))
+                cursor.execute(sql.SQL("CREATE DATABASE {} TEMPLATE template0").format(sql.Identifier(database)))
     finally:
         connection.close()
     with connect() as connection:
@@ -117,14 +135,19 @@ def status_report() -> dict:
             for table in TABLES:
                 cursor.execute(sql.SQL("SELECT count(*) FROM rental.{}").format(sql.Identifier(table)))
                 counts[table] = cursor.fetchone()[0]
+    parameters = connection_parameters()
     report = {"database": dbname, "user": user, "server": version,
               "interface_language": "Python 3", "driver": "psycopg2",
-              "connection": "Local Unix socket", "port": PORT, "table_counts": counts}
+              "host": parameters["host"], "port": parameters["port"], "table_counts": counts}
     print(json.dumps(report, indent=2))
     return report
 
 
 def stop() -> None:
+    connection_parameters()
+    if CONFIG_FILE.is_file():
+        print("Close the interface when finished. Manage the PostgreSQL server separately.")
+        return
     if (DATA / "PG_VERSION").exists():
         run_pg("pg_ctl", "-D", str(DATA), "-m", "fast", "-w", "stop")
 
