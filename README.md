@@ -9,7 +9,16 @@ This is a small database project with a Python window for viewing the tables.
 - Database driver: psycopg2
 - Data: 10 tables and 300 sample records, with at least 20 records in every table
 
-## Run on this Mac
+## Get the project
+
+Once you have access to the private repository, use **Code → Download ZIP** or clone it:
+
+```sh
+git clone https://github.com/AryanMick/cs4604-group9-outdoor-rental.git
+cd cs4604-group9-outdoor-rental
+```
+
+## Run on a Mac
 
 Unzip the project and double-click **Open Rental Interface.command**. It starts the local database, loads the tables on the first run, and opens the interface. Later runs keep the existing data.
 
