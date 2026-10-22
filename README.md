@@ -2,11 +2,12 @@
 
 CS4604 — Group 9. PostgreSQL database with a Python interface and 300 sample records.
 
-## Run
+## Set up
 
-1. Install and start PostgreSQL 15+. Install Python 3 with Tkinter.
-2. Download the project. Copy `db_config.example.json` to `db_config.json` and enter your PostgreSQL username and password. Adjust the host and port if needed.
-3. Open a terminal in the project folder and run:
+1. Install PostgreSQL 15+ and Python 3 with Tkinter. Start PostgreSQL.
+2. Click **Code → Download ZIP** and unzip the project.
+3. Copy `db_config.example.json` and rename the copy `db_config.json`. Open it and enter your PostgreSQL username and password. Change the host and port if needed.
+4. Open a terminal in the project folder and run:
 
 ```sh
 python -m pip install -r requirements.txt
@@ -14,10 +15,32 @@ python db_tools.py setup
 python rental_interface.py
 ```
 
-Use `python3` if your computer uses that command instead of `python`. Your PostgreSQL account needs permission to create the project database.
+Use `python3` if `python` is not recognized. Your PostgreSQL account needs permission to create the database. Keep `db_config.json` private.
 
-## Use
+## View data
 
-Select a table to view its data. Click **Test connection** to check the connection. Take screenshots of the populated tables and successful connection for submission.
+Choose a table from the dropdown. Click **Test connection** to check the connection. Take screenshots of the tables and successful connection before submitting.
 
-Close the window when finished. Keep `db_config.json` private.
+## Add or remove data
+
+The app only displays data. Open PostgreSQL's SQL Shell (`psql`) using the connection details in `db_config.json`, then select the project database:
+
+```sql
+\c outdoor_rental_group9
+```
+
+Add a customer:
+
+```sql
+INSERT INTO rental.customer (first_name, last_name, email)
+VALUES ('Sam', 'Lee', 'sam.lee@example.com');
+```
+
+Remove that same customer:
+
+```sql
+DELETE FROM rental.customer
+WHERE email = 'sam.lee@example.com';
+```
+
+Use your own values for other records. A customer linked to a reservation cannot be deleted. Click **Refresh data** in the app to see your changes. Close the window when finished.
