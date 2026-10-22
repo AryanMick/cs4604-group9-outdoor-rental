@@ -30,6 +30,18 @@ class RentalInterface(tk.Tk):
         self.style.configure("Offline.TLabel", background="#fbe9e9", foreground="#9b1c1c", padding=12)
         self.configure(background="#f6f7f8")
 
+        menu_bar = tk.Menu(self)
+        table_menu = tk.Menu(menu_bar, tearoff=False)
+        for table in db_tools.TABLES:
+            table_menu.add_command(label=table, command=lambda name=table: self.select_table(name))
+        table_menu.add_separator()
+        table_menu.add_command(label="Row counts", command=self.show_counts)
+        table_menu.add_separator()
+        table_menu.add_command(label="Previous page", command=lambda: self.tree.yview_scroll(-1, "pages"))
+        table_menu.add_command(label="Next page", command=lambda: self.tree.yview_scroll(1, "pages"))
+        menu_bar.add_cascade(label="Tables", menu=table_menu)
+        self.configure(menu=menu_bar)
+
         outer = ttk.Frame(self, padding=20)
         outer.pack(fill="both", expand=True)
         ttk.Label(outer, text="Outdoor Equipment Rental Management System", style="Title.TLabel").pack(anchor="w")
@@ -77,6 +89,10 @@ class RentalInterface(tk.Tk):
     def initial_connect(self):
         if self.test_connection():
             self.load_table()
+
+    def select_table(self, table):
+        self.selected.set(table)
+        self.load_table()
 
     def ensure_connection(self):
         if self.connection is None or self.connection.closed:
@@ -127,6 +143,8 @@ class RentalInterface(tk.Tk):
                 else:
                     values.append(str(value))
             self.tree.insert("", "end", values=values, tags=("odd",) if index % 2 else ())
+        self.tree.yview_moveto(0)
+        self.tree.xview_moveto(0)
 
     def load_table(self):
         table = self.selected.get()

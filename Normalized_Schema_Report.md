@@ -127,4 +127,4 @@ The sample dates do not overlap for the same equipment item. Preventing future o
 
 ## Screenshots
 
-Add real screenshots of each populated table and the successful database connection before submitting. The README explains how to open the interface and select the tables.
+The Submission_Screenshots folder contains 17 captures from the running Python interface, taken October 22, 2026. They show all populated tables, every sample row across the table pages, and a successful PostgreSQL connection with live row counts. The folder's README lists the files.

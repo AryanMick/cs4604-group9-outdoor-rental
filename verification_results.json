@@ -1,0 +1,47 @@
+{
+  "verified_at": "2026-10-22T15:17:33.787377-04:00",
+  "database": "outdoor_rental_group9",
+  "dbms": "PostgreSQL 15.14 (Homebrew)",
+  "interface_language": "Python 3 / Tkinter",
+  "total_rows": 300,
+  "table_counts": {
+    "business": 20,
+    "rental_equipment": 40,
+    "customer": 30,
+    "reservation": 40,
+    "payment": 30,
+    "manager": 20,
+    "employee": 20,
+    "admin": 20,
+    "defines_access": 40,
+    "admin_privileges": 40
+  },
+  "checks_passed": 21,
+  "checks": [
+    "All 10 base tables contain at least 20 rows",
+    "Every base table has a primary key",
+    "All 9 intended foreign keys exist",
+    "Reservations can exist without a payment",
+    "An equipment item retains multiple historical reservations",
+    "Sample reservations do not overlap for the same equipment",
+    "Sample payments respect the 2026-10-21 snapshot date",
+    "Duplicate primary key rejected",
+    "Orphan foreign key rejected",
+    "Due date before checkout rejected",
+    "Second payment for one reservation rejected",
+    "Negative payment rejected",
+    "Duplicate customer email rejected",
+    "Missing required manager rejected",
+    "Invalid equipment status rejected",
+    "Invalid reservation status rejected",
+    "Duplicate access assignment rejected",
+    "Duplicate privilege assignment rejected",
+    "Blank privilege rejected",
+    "Deletion of referenced rental history rejected",
+    "All sample rows preserved after verification"
+  ],
+  "limits": [
+    "The schema does not enforce reservation overlap exclusion; the sample dataset was checked for overlaps.",
+    "The interface views data; record editing and authentication are outside this assignment's implementation."
+  ]
+}

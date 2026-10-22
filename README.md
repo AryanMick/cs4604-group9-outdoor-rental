@@ -19,7 +19,7 @@ Use `python3` if `python` is not recognized. Your PostgreSQL account needs permi
 
 ## View data
 
-Choose a table from the dropdown. Click **Test connection** to check the connection. Take screenshots of the tables and successful connection before submitting.
+Choose a table from the dropdown or **Tables** menu. Use **Next page** in that menu for more rows. Click **Test connection** to check the connection. Take screenshots of the tables and successful connection before submitting.
 
 ## Add or remove data
 
@@ -44,3 +44,7 @@ WHERE email = 'sam.lee@example.com';
 ```
 
 Use your own values for other records. A customer linked to a reservation cannot be deleted. Click **Refresh data** in the app to see your changes. Close the window when finished.
+
+## Submission files
+
+The [screenshots](Submission_Screenshots/README.md) show all tables and the working connection. The [schema report](Normalized_Schema_Report.md) explains the corrected design and data types.
