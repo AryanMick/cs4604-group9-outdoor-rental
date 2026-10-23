@@ -1,8 +1,8 @@
 {
-  "verified_at": "2026-10-22T15:17:33.787377-04:00",
+  "verified_at": "2026-10-22T20:25:24.010875-04:00",
   "database": "outdoor_rental_group9",
-  "dbms": "PostgreSQL 15.14 (Homebrew)",
-  "interface_language": "Python 3 / Tkinter",
+  "dbms": "MySQL 8.4.13",
+  "interface_language": "Python 3 / Flask",
   "total_rows": 300,
   "table_counts": {
     "business": 20,
@@ -16,15 +16,19 @@
     "defines_access": 40,
     "admin_privileges": 40
   },
-  "checks_passed": 21,
+  "checks_passed": 25,
   "checks": [
-    "All 10 base tables contain at least 20 rows",
+    "All 10 base tables have their expected counts (300 total rows)",
     "Every base table has a primary key",
     "All 9 intended foreign keys exist",
+    "All 4 intended single-column unique constraints exist",
+    "All 19 CHECK constraints exist and are enforced",
+    "All 9 foreign-key relationships are free of orphan rows",
     "Reservations can exist without a payment",
-    "An equipment item retains multiple historical reservations",
+    "Equipment can retain multiple historical reservations",
     "Sample reservations do not overlap for the same equipment",
     "Sample payments respect the 2026-10-21 snapshot date",
+    "Every sample email uses the person\u2019s name and gmail.com",
     "Duplicate primary key rejected",
     "Orphan foreign key rejected",
     "Due date before checkout rejected",
@@ -38,10 +42,10 @@
     "Duplicate privilege assignment rejected",
     "Blank privilege rejected",
     "Deletion of referenced rental history rejected",
-    "All sample rows preserved after verification"
+    "All sample rows were preserved after verification"
   ],
   "limits": [
     "The schema does not enforce reservation overlap exclusion; the sample dataset was checked for overlaps.",
-    "The interface views data; record editing and authentication are outside this assignment's implementation."
+    "The browser interface is local and read-only; use MySQL Workbench for authorized edits."
   ]
 }

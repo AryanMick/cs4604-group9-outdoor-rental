@@ -4,13 +4,13 @@ Outdoor Equipment Rental Management System
 
 Team: Aryan Bhowmick, Tanner Fitzgerald, John Hewitt II, Timothy Peace
 
-**DBMS:** PostgreSQL 15.14
+**DBMS:** MySQL 8.4.13
 
-**Interface language:** Python 3 with Tkinter
+**Interface language:** Python 3 with Flask
 
-**Connection driver:** psycopg2
+**Connection driver:** PyMySQL
 
-The database has 10 tables and 300 sample records. Every table has at least 20 records. All 21 [database checks](verification_results.json) passed.
+The database has 10 tables and 300 sample records. Every table has at least 20 records. All 25 [database checks](verification_results.json) passed.
 
 Files for submission:
 

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+{% if error %}
+  <section class="unavailable">
+    <h2>Row counts unavailable</h2>
+    <p>Correct the connection settings or start MySQL, then reload this page.</p>
+  </section>
+{% else %}
+  <section class="section-heading">
+    <div>
+      <h2>Live row counts</h2>
+      <p>All ten base tables · {{ total_rows }} total records</p>
+    </div>
+  </section>
+
+  <div class="count-grid">
+    {% for name in choices[:10] %}
+      <a class="count-card" href="{{ url_for('show_table', table=name) }}">
+        <span>{{ name }}</span>
+        <strong>{{ counts.get(name, "—") }}</strong>
+        <small>rows</small>
+      </a>
+    {% endfor %}
+  </div>
+
+  <section class="views">
+    <h2>Joined views</h2>
+    <a href="{{ url_for('show_table', table='reservation_details') }}">reservation_details</a>
+    <a href="{{ url_for('show_table', table='employee_details') }}">employee_details</a>
+  </section>
+{% endif %}
+{% endblock %}

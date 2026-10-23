@@ -1,174 +1,231 @@
-"""Load the Group 9 project using the PostgreSQL connection in db_config.json.
-
-Without a config file, use a dedicated local instance on Unix systems.
-Its runtime data lives in ../work/group9_runtime.
-"""
+"""Set up or inspect the Group 9 database on an existing MySQL server."""
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 from pathlib import Path
-import shutil
-import subprocess
+import re
 import sys
-import tempfile
 
 PACKAGE = Path(__file__).resolve().parent
 CONFIG_FILE = Path(os.environ.get("GROUP9_DB_CONFIG", PACKAGE / "db_config.json"))
-RUNTIME = Path(os.environ.get("GROUP9_RUNTIME_DIR", PACKAGE.parent / "work" / "group9_runtime"))
-DATA = RUNTIME / "postgres_data"
-PORT = 55439
-DATABASE = "outdoor_rental_group9"
-USER = "group9"
-# Each runtime directory gets its own short socket name.
-SOCKET = Path(tempfile.gettempdir()) / ("cs4604-" + hashlib.sha256(str(RUNTIME).encode()).hexdigest()[:10])
-TABLES = ("business", "rental_equipment", "customer", "reservation", "payment",
-          "manager", "employee", "admin", "defines_access", "admin_privileges")
+TABLES = (
+    "business",
+    "rental_equipment",
+    "customer",
+    "reservation",
+    "payment",
+    "manager",
+    "employee",
+    "admin",
+    "defines_access",
+    "admin_privileges",
+)
+EXPECTED_COUNTS = {
+    "business": 20,
+    "rental_equipment": 40,
+    "customer": 30,
+    "reservation": 40,
+    "payment": 30,
+    "manager": 20,
+    "employee": 20,
+    "admin": 20,
+    "defines_access": 40,
+    "admin_privileges": 40,
+}
 
 
-def pg_bin() -> Path:
-    candidates = [os.environ.get("GROUP9_PG_BIN"), "/opt/homebrew/opt/postgresql@15/bin",
-                  "/opt/homebrew/opt/postgresql@16/bin", "/opt/homebrew/opt/postgresql@17/bin",
-                  "/opt/homebrew/opt/postgresql@18/bin", "/usr/local/opt/postgresql@15/bin"]
-    found = shutil.which("pg_ctl")
-    if found:
-        candidates.insert(1, str(Path(found).parent))
-    for candidate in candidates:
-        if candidate and (Path(candidate) / "initdb").is_file():
-            return Path(candidate)
-    raise RuntimeError("PostgreSQL server tools are missing. Install PostgreSQL and set GROUP9_PG_BIN to its bin folder.")
-
-
-def run_pg(name: str, *args: str, **kwargs):
-    return subprocess.run([str(pg_bin() / name), *map(str, args)], check=True, **kwargs)
-
-
-def connection_parameters(dbname=None) -> dict:
-    if not CONFIG_FILE.is_file() and (os.name == "nt" or "GROUP9_DB_CONFIG" in os.environ):
-        raise RuntimeError("Copy db_config.example.json to db_config.json and enter your PostgreSQL connection details.")
-    parameters = {"host": str(SOCKET), "port": PORT, "dbname": DATABASE,
-                  "user": USER, "connect_timeout": 5, "application_name": "CS4604 Group 9"}
-    if CONFIG_FILE.is_file():
-        try:
-            settings = json.loads(CONFIG_FILE.read_text())
-            for key in ("host", "port", "dbname", "user", "password"):
-                parameters[key] = settings[key]
-        except (OSError, ValueError, KeyError, TypeError) as exc:
-            raise RuntimeError("Check db_config.json. Use the same fields as db_config.example.json.") from exc
-    if dbname is not None:
-        parameters["dbname"] = dbname
-    return parameters
-
-
-def connect(dbname=None):
+def load_config() -> dict:
+    """Read and validate the private connection settings."""
+    if not CONFIG_FILE.is_file():
+        raise RuntimeError(
+            "Copy db_config.example.json to db_config.json and enter your MySQL credentials."
+        )
     try:
-        import psycopg2
+        settings = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+        config = {
+            "host": str(settings["host"]),
+            "port": int(settings["port"]),
+            "database": str(settings["database"]),
+            "user": str(settings["user"]),
+            "password": str(settings["password"]),
+        }
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        raise RuntimeError(
+            "Check db_config.json. It must use the same fields as db_config.example.json."
+        ) from exc
+    if not re.fullmatch(r"[A-Za-z0-9_]+", config["database"]):
+        raise RuntimeError("The database name may contain only letters, numbers, and underscores.")
+    if not 1 <= config["port"] <= 65535:
+        raise RuntimeError("The MySQL port must be between 1 and 65535.")
+    return config
+
+
+def connect(include_database: bool = True):
+    """Open a PyMySQL connection using db_config.json."""
+    try:
+        import pymysql
     except ImportError as exc:
-        raise RuntimeError("Install the Python driver: python3 -m pip install -r requirements.txt") from exc
-    return psycopg2.connect(**connection_parameters(dbname))
+        raise RuntimeError(
+            "Install the Python packages: python -m pip install -r requirements.txt"
+        ) from exc
+    config = load_config()
+    parameters = {
+        "host": config["host"],
+        "port": config["port"],
+        "user": config["user"],
+        "password": config["password"],
+        "charset": "utf8mb4",
+        "connect_timeout": 5,
+        "autocommit": False,
+    }
+    if include_database:
+        parameters["database"] = config["database"]
+    return pymysql.connect(**parameters)
 
 
-def start() -> None:
-    connection_parameters()
-    if CONFIG_FILE.is_file():
-        print("Using the PostgreSQL server from db_config.json.")
-        return
-    RUNTIME.mkdir(parents=True, exist_ok=True)
-    SOCKET.mkdir(mode=0o700, parents=True, exist_ok=True)
-    SOCKET.chmod(0o700)
-    if not (DATA / "PG_VERSION").exists():
-        run_pg("initdb", "-D", str(DATA), "-U", USER, "--encoding=UTF8", "--locale=C",
-               "--auth-local=trust", "--auth-host=reject")
-        with (DATA / "postgresql.conf").open("a") as config:
-            config.write("\n# This project accepts only local Unix-socket connections.\n")
-            config.write("listen_addresses = ''\n")
-            config.write(f"port = {PORT}\n")
-            config.write("unix_socket_directories = '" + str(SOCKET).replace("'", "''") + "'\n")
-            config.write("unix_socket_permissions = 0700\n")
-    status = subprocess.run([str(pg_bin() / "pg_ctl"), "-D", str(DATA), "status"],
-                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    if status.returncode != 0:
-        run_pg("pg_ctl", "-D", str(DATA), "-l", str(RUNTIME / "postgres.log"), "-w", "start")
-    (RUNTIME / "connection.json").write_text(json.dumps(connection_parameters(), indent=2) + "\n")
+def parse_version(version_text: str) -> tuple[int, int, int]:
+    """Return the numeric part of a MySQL version such as 8.4.3."""
+    match = re.match(r"(\d+)\.(\d+)\.(\d+)", version_text)
+    if not match:
+        raise RuntimeError(f"Could not read the MySQL server version: {version_text}")
+    return tuple(int(part) for part in match.groups())
+
+
+def validate_server(connection) -> str:
+    """Require a MySQL release that enforces CHECK constraints."""
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT VERSION(), @@version_comment")
+        version, comment = cursor.fetchone()
+    if "MariaDB" in version or "MariaDB" in comment:
+        raise RuntimeError("This project requires MySQL 8.4, not MariaDB.")
+    if parse_version(version) < (8, 0, 16):
+        raise RuntimeError(
+            "MySQL 8.0.16 or newer is required because older releases ignore CHECK constraints. "
+            "MySQL 8.4 is recommended."
+        )
+    return version
+
+
+def sql_statements(filename: str) -> list[str]:
+    """Read the project's simple SQL files as individual statements."""
+    text = (PACKAGE / filename).read_text(encoding="utf-8")
+    lines = [line for line in text.splitlines() if not line.lstrip().startswith("--")]
+    return [statement.strip() for statement in "\n".join(lines).split(";") if statement.strip()]
 
 
 def setup() -> None:
-    start()
-    database = connection_parameters()["dbname"]
-    connection = connect("postgres")
+    """Create and populate the configured database only when it is absent or empty."""
+    config = load_config()
+    database = config["database"]
+    server = connect(include_database=False)
     try:
-        connection.autocommit = True
+        version = validate_server(server)
+        with server.cursor() as cursor:
+            cursor.execute(
+                "SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name=%s",
+                (database,),
+            )
+            database_exists = cursor.fetchone()[0] == 1
+            if not database_exists:
+                cursor.execute(
+                    f"CREATE DATABASE `{database}` "
+                    "CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci"
+                )
+        server.commit()
+    finally:
+        server.close()
+
+    connection = connect()
+    try:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT 1 FROM pg_database WHERE datname = %s", (database,))
-            exists = cursor.fetchone() is not None
-        if not exists:
-            # CREATE DATABASE cannot run in a transaction block.
-            from psycopg2 import sql
+            cursor.execute(
+                "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=%s",
+                (database,),
+            )
+            object_count = cursor.fetchone()[0]
+        if object_count:
+            raise RuntimeError(
+                f"Refusing setup: database '{database}' already contains {object_count} "
+                "table or view object(s). No data was changed."
+            )
+
+        try:
             with connection.cursor() as cursor:
-                cursor.execute(sql.SQL("CREATE DATABASE {} TEMPLATE template0").format(sql.Identifier(database)))
+                for statement in sql_statements("01_schema.sql"):
+                    cursor.execute(statement)
+        except Exception as exc:
+            connection.rollback()
+            raise RuntimeError(
+                "Schema setup failed. MySQL commits DDL statements automatically, so the database "
+                "may now be partially created. No objects were deleted; inspect or choose a new "
+                "empty database before trying again."
+            ) from exc
+
+        try:
+            with connection.cursor() as cursor:
+                for statement in sql_statements("02_sample_data.sql"):
+                    cursor.execute(statement)
+            connection.commit()
+        except Exception as exc:
+            connection.rollback()
+            raise RuntimeError(
+                "Sample-data loading failed and its transaction was rolled back. The schema remains "
+                "because MySQL DDL cannot be wrapped in an atomic transaction. No objects were deleted."
+            ) from exc
     finally:
         connection.close()
-    with connect() as connection:
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT to_regnamespace('rental')")
-            exists = cursor.fetchone()[0] is not None
-            if not exists:
-                # Keep both standalone SQL scripts in one atomic setup transaction.
-                for filename in ("01_schema.sql", "02_sample_data.sql"):
-                    script = (PACKAGE / filename).read_text()
-                    script = "\n".join(line for line in script.splitlines()
-                                       if line.strip() not in ("BEGIN;", "COMMIT;"))
-                    cursor.execute(script)
-    print("Database ready. Existing project data was preserved." if exists else "Database created and sample data loaded.")
+
+    print(f"Database created and 300 sample rows loaded with MySQL {version}.")
     status_report()
 
 
 def status_report() -> dict:
-    from psycopg2 import sql
-    with connect() as connection:
+    """Query the configured database and print live connection details and counts."""
+    config = load_config()
+    connection = connect()
+    try:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT current_database(), current_user, version()")
-            dbname, user, version = cursor.fetchone()
+            cursor.execute("SELECT VERSION(), DATABASE(), CURRENT_USER(), CONNECTION_ID()")
+            version, database, user, connection_id = cursor.fetchone()
             counts = {}
             for table in TABLES:
-                cursor.execute(sql.SQL("SELECT count(*) FROM rental.{}").format(sql.Identifier(table)))
+                cursor.execute(f"SELECT COUNT(*) FROM `{table}`")
                 counts[table] = cursor.fetchone()[0]
-    parameters = connection_parameters()
-    report = {"database": dbname, "user": user, "server": version,
-              "interface_language": "Python 3", "driver": "psycopg2",
-              "host": parameters["host"], "port": parameters["port"], "table_counts": counts}
+    finally:
+        connection.close()
+    report = {
+        "database": database,
+        "user": user,
+        "server": f"MySQL {version}",
+        "connection_id": connection_id,
+        "interface_language": "Python 3 / Flask",
+        "driver": "PyMySQL",
+        "host": config["host"],
+        "port": config["port"],
+        "table_counts": counts,
+        "total_rows": sum(counts.values()),
+    }
     print(json.dumps(report, indent=2))
     return report
 
 
-def stop() -> None:
-    connection_parameters()
-    if CONFIG_FILE.is_file():
-        print("Close the interface when finished. Manage the PostgreSQL server separately.")
-        return
-    if (DATA / "PG_VERSION").exists():
-        run_pg("pg_ctl", "-D", str(DATA), "-m", "fast", "-w", "stop")
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("setup", "start", "status", "stop"), nargs="?", default="setup")
+    parser.add_argument("action", choices=("setup", "status"), nargs="?", default="setup")
     args = parser.parse_args()
     if args.action == "setup":
         setup()
-    elif args.action == "start":
-        start()
-    elif args.action == "status":
+    else:
         status_report()
-    elif args.action == "stop":
-        stop()
 
 
 if __name__ == "__main__":
     try:
         main()
-    except (RuntimeError, subprocess.CalledProcessError) as exc:
-        print(f"Setup error: {exc}", file=sys.stderr)
+    except Exception as exc:
+        print(f"Database error: {exc}", file=sys.stderr)
+        if exc.__cause__ is not None:
+            print(f"Cause: {exc.__cause__}", file=sys.stderr)
         sys.exit(1)

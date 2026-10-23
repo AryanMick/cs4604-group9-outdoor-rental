@@ -11,5 +11,5 @@ db_config.json
 # Local database files and logs
 work/
 group9_runtime/
-postgres_data/
+mysql_data/
 *.log

@@ -1,8 +1,6 @@
 -- CS4604 Group 9 | Synthetic demonstration data, snapshot 2026-10-21.
--- All names and addresses are illustrative. Emails use example.com.
+-- All names, addresses, and gmail.com email addresses are illustrative.
 -- Run once after 01_schema.sql in a new project database.
-BEGIN;
-SET search_path TO rental, public;
 
 INSERT INTO business (business_id, business_name, address) VALUES
     (1, 'Blue Ridge Outfitters', '101 Demonstration Trail, Blacksburg, VA 24060'),
@@ -69,80 +67,80 @@ INSERT INTO rental_equipment (equipment_id, equipment_type, status, business_id)
     (40, 'Camping stove', 'RETIRED', 20);
 
 INSERT INTO customer (customer_id, first_name, last_name, email) VALUES
-    (1, 'Alex', 'Carter', 'alex.carter@example.com'),
-    (2, 'Jordan', 'Brooks', 'jordan.brooks@example.com'),
-    (3, 'Taylor', 'Reed', 'taylor.reed@example.com'),
-    (4, 'Morgan', 'Ellis', 'morgan.ellis@example.com'),
-    (5, 'Casey', 'Parker', 'casey.parker@example.com'),
-    (6, 'Riley', 'Bennett', 'riley.bennett@example.com'),
-    (7, 'Avery', 'Cole', 'avery.cole@example.com'),
-    (8, 'Cameron', 'Hayes', 'cameron.hayes@example.com'),
-    (9, 'Quinn', 'Foster', 'quinn.foster@example.com'),
-    (10, 'Jamie', 'Morgan', 'jamie.morgan@example.com'),
-    (11, 'Drew', 'Sullivan', 'drew.sullivan@example.com'),
-    (12, 'Rowan', 'Price', 'rowan.price@example.com'),
-    (13, 'Reese', 'Collins', 'reese.collins@example.com'),
-    (14, 'Skyler', 'Ward', 'skyler.ward@example.com'),
-    (15, 'Finley', 'Ross', 'finley.ross@example.com'),
-    (16, 'Dakota', 'Gray', 'dakota.gray@example.com'),
-    (17, 'Emerson', 'Bell', 'emerson.bell@example.com'),
-    (18, 'Harper', 'Wood', 'harper.wood@example.com'),
-    (19, 'Logan', 'Stone', 'logan.stone@example.com'),
-    (20, 'Peyton', 'Lake', 'peyton.lake@example.com'),
-    (21, 'Sam', 'Turner', 'sam.turner@example.com'),
-    (22, 'Robin', 'Hill', 'robin.hill@example.com'),
-    (23, 'Charlie', 'Young', 'charlie.young@example.com'),
-    (24, 'Blair', 'Adams', 'blair.adams@example.com'),
-    (25, 'Kendall', 'Scott', 'kendall.scott@example.com'),
-    (26, 'Sage', 'Wilson', 'sage.wilson@example.com'),
-    (27, 'River', 'Bailey', 'river.bailey@example.com'),
-    (28, 'Elliot', 'King', 'elliot.king@example.com'),
-    (29, 'Hayden', 'Green', 'hayden.green@example.com'),
-    (30, 'Micah', 'Wright', 'micah.wright@example.com');
+    (1, 'Alex', 'Carter', 'AlexCarter@gmail.com'),
+    (2, 'Jordan', 'Brooks', 'JordanBrooks@gmail.com'),
+    (3, 'Taylor', 'Reed', 'TaylorReed@gmail.com'),
+    (4, 'Morgan', 'Ellis', 'MorganEllis@gmail.com'),
+    (5, 'Casey', 'Parker', 'CaseyParker@gmail.com'),
+    (6, 'Riley', 'Bennett', 'RileyBennett@gmail.com'),
+    (7, 'Avery', 'Cole', 'AveryCole@gmail.com'),
+    (8, 'Cameron', 'Hayes', 'CameronHayes@gmail.com'),
+    (9, 'Quinn', 'Foster', 'QuinnFoster@gmail.com'),
+    (10, 'Jamie', 'Morgan', 'JamieMorgan@gmail.com'),
+    (11, 'Drew', 'Sullivan', 'DrewSullivan@gmail.com'),
+    (12, 'Rowan', 'Price', 'RowanPrice@gmail.com'),
+    (13, 'Reese', 'Collins', 'ReeseCollins@gmail.com'),
+    (14, 'Skyler', 'Ward', 'SkylerWard@gmail.com'),
+    (15, 'Finley', 'Ross', 'FinleyRoss@gmail.com'),
+    (16, 'Dakota', 'Gray', 'DakotaGray@gmail.com'),
+    (17, 'Emerson', 'Bell', 'EmersonBell@gmail.com'),
+    (18, 'Harper', 'Wood', 'HarperWood@gmail.com'),
+    (19, 'Logan', 'Stone', 'LoganStone@gmail.com'),
+    (20, 'Peyton', 'Lake', 'PeytonLake@gmail.com'),
+    (21, 'Sam', 'Turner', 'SamTurner@gmail.com'),
+    (22, 'Robin', 'Hill', 'RobinHill@gmail.com'),
+    (23, 'Charlie', 'Young', 'CharlieYoung@gmail.com'),
+    (24, 'Blair', 'Adams', 'BlairAdams@gmail.com'),
+    (25, 'Kendall', 'Scott', 'KendallScott@gmail.com'),
+    (26, 'Sage', 'Wilson', 'SageWilson@gmail.com'),
+    (27, 'River', 'Bailey', 'RiverBailey@gmail.com'),
+    (28, 'Elliot', 'King', 'ElliotKing@gmail.com'),
+    (29, 'Hayden', 'Green', 'HaydenGreen@gmail.com'),
+    (30, 'Micah', 'Wright', 'MicahWright@gmail.com');
 
 INSERT INTO manager (manager_id, first_name, last_name, email, business_id) VALUES
-    (1, 'Alex', 'Carter', 'manager01@example.com', 1),
-    (2, 'Jordan', 'Brooks', 'manager02@example.com', 2),
-    (3, 'Taylor', 'Reed', 'manager03@example.com', 3),
-    (4, 'Morgan', 'Ellis', 'manager04@example.com', 4),
-    (5, 'Casey', 'Parker', 'manager05@example.com', 5),
-    (6, 'Riley', 'Bennett', 'manager06@example.com', 6),
-    (7, 'Avery', 'Cole', 'manager07@example.com', 7),
-    (8, 'Cameron', 'Hayes', 'manager08@example.com', 8),
-    (9, 'Quinn', 'Foster', 'manager09@example.com', 9),
-    (10, 'Jamie', 'Morgan', 'manager10@example.com', 10),
-    (11, 'Drew', 'Sullivan', 'manager11@example.com', 11),
-    (12, 'Rowan', 'Price', 'manager12@example.com', 12),
-    (13, 'Reese', 'Collins', 'manager13@example.com', 13),
-    (14, 'Skyler', 'Ward', 'manager14@example.com', 14),
-    (15, 'Finley', 'Ross', 'manager15@example.com', 15),
-    (16, 'Dakota', 'Gray', 'manager16@example.com', 16),
-    (17, 'Emerson', 'Bell', 'manager17@example.com', 17),
-    (18, 'Harper', 'Wood', 'manager18@example.com', 18),
-    (19, 'Logan', 'Stone', 'manager19@example.com', 19),
-    (20, 'Peyton', 'Lake', 'manager20@example.com', 20);
+    (1, 'Alex', 'Carter', 'AlexCarter@gmail.com', 1),
+    (2, 'Jordan', 'Brooks', 'JordanBrooks@gmail.com', 2),
+    (3, 'Taylor', 'Reed', 'TaylorReed@gmail.com', 3),
+    (4, 'Morgan', 'Ellis', 'MorganEllis@gmail.com', 4),
+    (5, 'Casey', 'Parker', 'CaseyParker@gmail.com', 5),
+    (6, 'Riley', 'Bennett', 'RileyBennett@gmail.com', 6),
+    (7, 'Avery', 'Cole', 'AveryCole@gmail.com', 7),
+    (8, 'Cameron', 'Hayes', 'CameronHayes@gmail.com', 8),
+    (9, 'Quinn', 'Foster', 'QuinnFoster@gmail.com', 9),
+    (10, 'Jamie', 'Morgan', 'JamieMorgan@gmail.com', 10),
+    (11, 'Drew', 'Sullivan', 'DrewSullivan@gmail.com', 11),
+    (12, 'Rowan', 'Price', 'RowanPrice@gmail.com', 12),
+    (13, 'Reese', 'Collins', 'ReeseCollins@gmail.com', 13),
+    (14, 'Skyler', 'Ward', 'SkylerWard@gmail.com', 14),
+    (15, 'Finley', 'Ross', 'FinleyRoss@gmail.com', 15),
+    (16, 'Dakota', 'Gray', 'DakotaGray@gmail.com', 16),
+    (17, 'Emerson', 'Bell', 'EmersonBell@gmail.com', 17),
+    (18, 'Harper', 'Wood', 'HarperWood@gmail.com', 18),
+    (19, 'Logan', 'Stone', 'LoganStone@gmail.com', 19),
+    (20, 'Peyton', 'Lake', 'PeytonLake@gmail.com', 20);
 
 INSERT INTO employee (employee_id, first_name, last_name, email, manager_id) VALUES
-    (1, 'Drew', 'Sullivan', 'employee01@example.com', 1),
-    (2, 'Rowan', 'Price', 'employee02@example.com', 2),
-    (3, 'Reese', 'Collins', 'employee03@example.com', 3),
-    (4, 'Skyler', 'Ward', 'employee04@example.com', 4),
-    (5, 'Finley', 'Ross', 'employee05@example.com', 5),
-    (6, 'Dakota', 'Gray', 'employee06@example.com', 6),
-    (7, 'Emerson', 'Bell', 'employee07@example.com', 7),
-    (8, 'Harper', 'Wood', 'employee08@example.com', 8),
-    (9, 'Logan', 'Stone', 'employee09@example.com', 9),
-    (10, 'Peyton', 'Lake', 'employee10@example.com', 10),
-    (11, 'Sam', 'Turner', 'employee11@example.com', 11),
-    (12, 'Robin', 'Hill', 'employee12@example.com', 12),
-    (13, 'Charlie', 'Young', 'employee13@example.com', 13),
-    (14, 'Blair', 'Adams', 'employee14@example.com', 14),
-    (15, 'Kendall', 'Scott', 'employee15@example.com', 15),
-    (16, 'Sage', 'Wilson', 'employee16@example.com', 16),
-    (17, 'River', 'Bailey', 'employee17@example.com', 17),
-    (18, 'Elliot', 'King', 'employee18@example.com', 18),
-    (19, 'Hayden', 'Green', 'employee19@example.com', 19),
-    (20, 'Micah', 'Wright', 'employee20@example.com', 20);
+    (1, 'Drew', 'Sullivan', 'DrewSullivan@gmail.com', 1),
+    (2, 'Rowan', 'Price', 'RowanPrice@gmail.com', 2),
+    (3, 'Reese', 'Collins', 'ReeseCollins@gmail.com', 3),
+    (4, 'Skyler', 'Ward', 'SkylerWard@gmail.com', 4),
+    (5, 'Finley', 'Ross', 'FinleyRoss@gmail.com', 5),
+    (6, 'Dakota', 'Gray', 'DakotaGray@gmail.com', 6),
+    (7, 'Emerson', 'Bell', 'EmersonBell@gmail.com', 7),
+    (8, 'Harper', 'Wood', 'HarperWood@gmail.com', 8),
+    (9, 'Logan', 'Stone', 'LoganStone@gmail.com', 9),
+    (10, 'Peyton', 'Lake', 'PeytonLake@gmail.com', 10),
+    (11, 'Sam', 'Turner', 'SamTurner@gmail.com', 11),
+    (12, 'Robin', 'Hill', 'RobinHill@gmail.com', 12),
+    (13, 'Charlie', 'Young', 'CharlieYoung@gmail.com', 13),
+    (14, 'Blair', 'Adams', 'BlairAdams@gmail.com', 14),
+    (15, 'Kendall', 'Scott', 'KendallScott@gmail.com', 15),
+    (16, 'Sage', 'Wilson', 'SageWilson@gmail.com', 16),
+    (17, 'River', 'Bailey', 'RiverBailey@gmail.com', 17),
+    (18, 'Elliot', 'King', 'ElliotKing@gmail.com', 18),
+    (19, 'Hayden', 'Green', 'HaydenGreen@gmail.com', 19),
+    (20, 'Micah', 'Wright', 'MicahWright@gmail.com', 20);
 
 INSERT INTO admin (admin_id, first_name, last_name) VALUES
     (1, 'Peyton', 'Lake'),
@@ -323,14 +321,3 @@ INSERT INTO admin_privileges (admin_id, privilege) VALUES
     (19, 'MANAGE_INVENTORY'),
     (20, 'VIEW_RESERVATIONS'),
     (20, 'MANAGE_INVENTORY');
-
-SELECT setval(pg_get_serial_sequence('rental.business', 'business_id'), (SELECT max(business_id) FROM business), true);
-SELECT setval(pg_get_serial_sequence('rental.rental_equipment', 'equipment_id'), (SELECT max(equipment_id) FROM rental_equipment), true);
-SELECT setval(pg_get_serial_sequence('rental.customer', 'customer_id'), (SELECT max(customer_id) FROM customer), true);
-SELECT setval(pg_get_serial_sequence('rental.reservation', 'reservation_id'), (SELECT max(reservation_id) FROM reservation), true);
-SELECT setval(pg_get_serial_sequence('rental.payment', 'payment_id'), (SELECT max(payment_id) FROM payment), true);
-SELECT setval(pg_get_serial_sequence('rental.manager', 'manager_id'), (SELECT max(manager_id) FROM manager), true);
-SELECT setval(pg_get_serial_sequence('rental.employee', 'employee_id'), (SELECT max(employee_id) FROM employee), true);
-SELECT setval(pg_get_serial_sequence('rental.admin', 'admin_id'), (SELECT max(admin_id) FROM admin), true);
-
-COMMIT;

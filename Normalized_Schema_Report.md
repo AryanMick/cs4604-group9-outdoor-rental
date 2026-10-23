@@ -4,11 +4,11 @@ CS4604 — Introduction to Database Systems
 Group 9  
 Aryan Bhowmick, Tanner Fitzgerald, John Hewitt II, Timothy Peace  
 Contact: johnh95@vt.edu  
-Schema revision: October 21, 2026
+Schema revision: October 22, 2026
 
 ## Project
 
-The database keeps track of outdoor rental businesses, equipment, customers, reservations, payments, and staff. It uses PostgreSQL 15.14. The interface is written in Python 3 with Tkinter and connects through psycopg2.
+The database keeps track of outdoor rental businesses, equipment, customers, reservations, payments, and staff. It uses MySQL 8.4 with InnoDB tables. The local read-only browser interface is written in Python 3 with Flask and connects through PyMySQL.
 
 ## Changes to the original schema
 
@@ -76,10 +76,10 @@ ADMIN_PRIVILEGES(
 
 ## Data types and constraints
 
-| Attributes | PostgreSQL type |
+| Attributes | MySQL type |
 |---|---|
-| Entity primary keys | INTEGER, generated identity |
-| Foreign keys | INTEGER |
+| Entity primary keys | INT AUTO_INCREMENT |
+| Foreign keys | INT |
 | First and last names | VARCHAR(80) |
 | Business name | VARCHAR(120) |
 | Address | VARCHAR(255) |
@@ -87,9 +87,9 @@ ADMIN_PRIVILEGES(
 | Equipment type and privilege | VARCHAR(60) |
 | Status | VARCHAR(20) |
 | Checkout, due, and payment dates | DATE |
-| Payment amount | NUMERIC(10,2) |
+| Payment amount | DECIMAL(10,2) |
 
-All columns are required. Names, addresses, emails, equipment types, and privileges cannot be blank. Email is unique within each customer, manager, or employee table. A due date must be later than its checkout date, and a payment amount must be positive. Foreign keys reject records that refer to missing parents and prevent deleting a referenced parent.
+All columns are required. Names, addresses, emails, equipment types, and privileges cannot be blank. MySQL 8.4 enforces these rules with named CHECK constraints that use TRIM. Email is unique within each customer, manager, or employee table. A due date must be later than its checkout date, and a payment amount must be positive. Explicit FOREIGN KEY clauses reject records that refer to missing parents and prevent deleting a referenced parent.
 
 Equipment status is AVAILABLE, MAINTENANCE, or RETIRED. AVAILABLE means the equipment is serviceable; its current booking is recorded separately in RESERVATION. Reservation status is RESERVED, CHECKED_OUT, RETURNED, or CANCELLED. The checkout date is the scheduled start of the rental.
 
@@ -105,7 +105,7 @@ Two views, reservation_details and employee_details, show those joined values wi
 
 ## Sample data
 
-The dataset represents October 21, 2026. The names and addresses are fictional, and email addresses use example.com.
+The dataset represents October 21, 2026. The names, addresses, and gmail.com email addresses are synthetic.
 
 | Table | Records |
 |---|---:|
@@ -121,10 +121,10 @@ The dataset represents October 21, 2026. The names and addresses are fictional, 
 | admin_privileges | 40 |
 | Total | 300 |
 
-The database was tested for duplicate keys, missing foreign-key references, duplicate payments, invalid dates and statuses, negative amounts, and duplicate access and privilege assignments. The tests also confirmed that an unpaid reservation is allowed and that equipment can have more than one reservation over time.
+The verification script checks exact row counts, primary keys, foreign keys, unique constraints, enforced CHECK constraints, missing foreign-key references, duplicate payments, invalid dates and statuses, negative amounts, and duplicate access and privilege assignments. It also confirms that an unpaid reservation is allowed and that equipment can have more than one reservation over time. Trial changes are rolled back.
 
-The sample dates do not overlap for the same equipment item. Preventing future overlapping bookings is not enforced by this schema. Payment amounts are sample values because the original model does not include rental prices. The interface displays records and checks the connection; editing records and enforcing administrator permissions are outside this implementation.
+The sample dates do not overlap for the same equipment item. Preventing future overlapping bookings is not enforced by this schema. Payment amounts are sample values because the original model does not include rental prices. The interface displays records and verifies a live MySQL connection; editing records and enforcing administrator permissions are outside this implementation.
 
 ## Screenshots
 
-The Submission_Screenshots folder contains 17 captures from the running Python interface, taken October 22, 2026. They show all populated tables, every sample row across the table pages, and a successful PostgreSQL connection with live row counts. The folder's README lists the files.
+The Submission_Screenshots folder documents the browser interface, populated tables, table pages, successful MySQL connection, and live row counts. The folder's README lists the files.

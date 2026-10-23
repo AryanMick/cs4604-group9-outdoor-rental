@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Outdoor Rental Database{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Outdoor Equipment Rental Management System</h1>
+      <p>CS4604 · Group 9 · MySQL 8.4 · Python 3 / Flask</p>
+    </div>
+    <a class="home-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+  </header>
+
+  <main>
+    {% if error %}
+      <section class="status error">
+        <strong>Database connection failed</strong>
+        <span>{{ error }}</span>
+        <span>No successful database query is currently verified.</span>
+      </section>
+    {% else %}
+      <section class="status success">
+        <strong>Connection and queries successful</strong>
+        <span>MySQL {{ connection.version }} · Database: {{ connection.database }} · User: {{ connection.user }}</span>
+        <span>Connection ID: {{ connection.connection_id }} · Checked: {{ connection.checked }}</span>
+      </section>
+    {% endif %}
+
+    <form class="table-picker" action="{{ url_for('choose_table') }}" method="get">
+      <label for="table">Select a table or view</label>
+      <select id="table" name="table">
+        {% for name in choices %}
+          <option value="{{ name }}" {% if table is defined and table == name %}selected{% endif %}>
+            {{ name }}
+          </option>
+        {% endfor %}
+      </select>
+      <button type="submit">View data</button>
+    </form>
+
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

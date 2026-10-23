@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}{{ table }} · Outdoor Rental Database{% endblock %}
+{% block content %}
+{% if error %}
+  <section class="unavailable">
+    <h2>{{ table }} data unavailable</h2>
+    <p>Correct the connection settings or start MySQL, then reload this page.</p>
+  </section>
+{% else %}
+  <section class="section-heading">
+    <div>
+      <h2>{{ table }}</h2>
+      <p>{{ row_count }} rows · page {{ page }} of {{ total_pages }} · 20 rows per page</p>
+    </div>
+    <a class="refresh" href="{{ url_for('show_table', table=table, page=page) }}">Refresh data</a>
+  </section>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          {% for column in columns %}<th>{{ column }}</th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            {% for value in row %}
+              <td>{{ "NULL" if value is none else value }}</td>
+            {% endfor %}
+          </tr>
+        {% else %}
+          <tr><td class="empty" colspan="{{ columns|length or 1 }}">No rows available.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <nav class="pagination" aria-label="Table pages">
+    {% if page > 1 %}
+      <a href="{{ url_for('show_table', table=table, page=page-1) }}">← Previous 20</a>
+    {% else %}
+      <span>← Previous 20</span>
+    {% endif %}
+    <strong>Page {{ page }} of {{ total_pages }}</strong>
+    {% if page < total_pages %}
+      <a href="{{ url_for('show_table', table=table, page=page+1) }}">Next 20 →</a>
+    {% else %}
+      <span>Next 20 →</span>
+    {% endif %}
+  </nav>
+{% endif %}
+{% endblock %}
