@@ -14,6 +14,7 @@ The database has 10 tables and 300 sample records. Every table has at least 20 r
 
 Files for submission:
 
+- [Deliverables PDF](Deliverables.pdf): DBMS, interface language, connection proof, and all tables.
 - [Screenshots](Submission_Screenshots/README.md): all table data and the successful connection.
 - [Corrected relational schema](Corrected_Relational_Schema.svg).
 - [Normalization report](Normalized_Schema_Report.md): design decisions, keys, and data types.

@@ -63,6 +63,7 @@ that is linked to a reservation. Refresh the browser page after a change.
 
 ## Files
 
+- [Deliverables.pdf](Deliverables.pdf) contains the connection proof and all table screenshots.
 - `01_schema.sql` defines ten normalized InnoDB tables, constraints, indexes,
   and two joined views.
 - `02_sample_data.sql` contains the 300 synthetic records.
