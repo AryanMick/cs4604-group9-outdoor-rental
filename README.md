@@ -3,6 +3,8 @@
 CS4604 — Group 9. MySQL 8.4 database with a local browser interface and 300
 synthetic sample records.
 
+**Start here:** [Detailed project walkthrough and presentation guide](docs/PROJECT_WALKTHROUGH.md).
+
 ## First-time setup (Windows, macOS, or Linux)
 
 1. Install [MySQL Community 8.4](https://dev.mysql.com/downloads/mysql/8.4.html) and [Python 3.10 or newer](https://www.python.org/downloads/).
