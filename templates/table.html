@@ -15,6 +15,7 @@
     <a class="refresh" href="{{ url_for('show_table', table=table, page=page) }}">Refresh data</a>
   </section>
 
+  {# TODO: Future insert form for base tables, after server-side validation/routes exist. #}
   <div class="table-wrap">
     <table>
       <thead>
@@ -28,6 +29,7 @@
             {% for value in row %}
               <td>{{ "NULL" if value is none else value }}</td>
             {% endfor %}
+            {# TODO: Future row delete control must carry every primary-key field. #}
           </tr>
         {% else %}
           <tr><td class="empty" colspan="{{ columns|length or 1 }}">No rows available.</td></tr>

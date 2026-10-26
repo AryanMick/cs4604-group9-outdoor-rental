@@ -121,5 +121,9 @@ def show_table(table: str):
         )
 
 
+# TODO: Future action POST routes belong here, with server-side validation and
+# CSRF protection before calling table_actions; current routes remain read-only.
+
+
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5001, debug=False)
