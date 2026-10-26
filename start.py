@@ -8,10 +8,33 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+from threading import Thread
 import venv
+import webbrowser
 
 PROJECT = Path(__file__).resolve().parent
 VENV = PROJECT / ".venv"
+APP_URL = "http://127.0.0.1:5001"
+
+
+def open_browser(url: str) -> None:
+    """Use the default browser on Windows, macOS, or Linux."""
+    try:
+        if webbrowser.open(url, new=2):
+            return
+    except (webbrowser.Error, OSError):
+        pass
+    print(f"Open {url} in your browser.", flush=True)
+
+
+def serve_interface(app) -> None:
+    """Reserve the port before opening the browser, then serve the interface."""
+    from werkzeug.serving import make_server
+
+    with make_server("127.0.0.1", 5001, app, threaded=True) as server:
+        print(f"Opening {APP_URL}. Stop with Ctrl+C.", flush=True)
+        Thread(target=open_browser, args=(APP_URL,), daemon=True).start()
+        server.serve_forever()
 
 
 def run_in_project_environment() -> int:
@@ -106,8 +129,7 @@ def main() -> int:
         ) from exc
     from rental_interface import app
 
-    print("Open http://127.0.0.1:5001 in your browser. Stop with Ctrl+C.", flush=True)
-    app.run(host="127.0.0.1", port=5001, debug=False)
+    serve_interface(app)
     return 0
 
 
