@@ -110,7 +110,7 @@ def validate_server(connection) -> str:
 
 def sql_statements(filename: str) -> list[str]:
     """Read the project's simple SQL files as individual statements."""
-    text = (PACKAGE / filename).read_text(encoding="utf-8")
+    text = (PACKAGE / "database" / filename).read_text(encoding="utf-8")
     lines = [line for line in text.splitlines() if not line.lstrip().startswith("--")]
     return [statement.strip() for statement in "\n".join(lines).split(";") if statement.strip()]
 

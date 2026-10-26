@@ -127,4 +127,4 @@ The sample dates do not overlap for the same equipment item. Preventing future o
 
 ## Screenshots
 
-The Submission_Screenshots folder documents the browser interface, populated tables, table pages, successful MySQL connection, and live row counts. The folder's README lists the files.
+The [submission screenshots](../submission/screenshots/README.md) document the browser interface, populated tables, table pages, successful MySQL connection, and live row counts. The folder’s README lists the files.

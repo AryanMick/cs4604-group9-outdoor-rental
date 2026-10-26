@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from datetime import datetime
 import json
-from pathlib import Path
 
 import pymysql
 
@@ -190,7 +189,7 @@ def verify() -> dict:
                 "The browser interface is local and read-only; use MySQL Workbench for authorized edits.",
             ],
         }
-        destination = Path(__file__).resolve().with_name("verification_results.json")
+        destination = db_tools.PACKAGE / "submission" / "verification_results.json"
         destination.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
         print(json.dumps(report, indent=2))
         return report

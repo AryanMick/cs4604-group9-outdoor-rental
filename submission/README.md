@@ -15,9 +15,9 @@ The database has 10 tables and 300 sample records. Every table has at least 20 r
 Files for submission:
 
 - [Deliverables PDF](Deliverables.pdf): DBMS, interface language, connection proof, and all tables.
-- [Screenshots](Submission_Screenshots/README.md): all table data and the successful connection.
-- [Corrected relational schema](Corrected_Relational_Schema.svg).
-- [Normalization report](Normalized_Schema_Report.md): design decisions, keys, and data types.
-- `01_schema.sql` and `02_sample_data.sql`: table definitions and sample data.
+- [Screenshots](screenshots/README.md): all table data and the successful connection.
+- [Corrected relational schema](../docs/Corrected_Relational_Schema.svg).
+- [Normalization report](../docs/Normalized_Schema_Report.md): design decisions, keys, and data types.
+- [01_schema.sql](../database/01_schema.sql) and [02_sample_data.sql](../database/02_sample_data.sql): table definitions and sample data.
 
-The README explains how to run the project and add or remove data.
+The [project README](../README.md) explains how to run the project and add or remove data.
