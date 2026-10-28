@@ -1,7 +1,9 @@
-"""Placeholders for future record actions; no database operations are implemented."""
+"""Record actions: insert_record is implemented; delete_record is still a shell."""
+from __future__ import annotations
+
+import db_tools
 
 # Base-table allowlist, matching database/01_schema.sql; views are excluded.
-# TODO: Reuse db_tools.connect() for MySQL when implementing these actions.
 TABLE_PRIMARY_KEYS = {
     "business": ("business_id",),
     "rental_equipment": ("equipment_id",),
@@ -16,11 +18,53 @@ TABLE_PRIMARY_KEYS = {
 }
 
 
-def insert_record(table: str, values: dict) -> None:
-    """Future insertion entry point; always raises until implemented."""
-    # TODO: Validate allowlisted table/columns and values before parameterized SQL.
-    # TODO: Add transaction commit/rollback and useful constraint/FK error handling.
-    raise NotImplementedError("Record insertion is not implemented.")
+def insert_record(table: str, values: dict) -> int:
+    """Insert one row into an allowlisted table and return the new AUTO_INCREMENT id (0 if none).
+
+    Raises ValueError for bad input or constraint/FK violations, RuntimeError for setup problems.
+    """
+    # Table names cannot be parameterized, so only allowlisted names reach the SQL string.
+    if table not in TABLE_PRIMARY_KEYS:
+        raise ValueError(f"Unknown table: {table!r}")
+    if not values:
+        raise ValueError("No values were provided to insert.")
+
+    import pymysql  # imported here so db_tools can report a missing package first
+
+    connection = db_tools.connect()
+    try:
+        with connection.cursor() as cursor:
+            # Column names also cannot be parameterized; check them against the real schema.
+            cursor.execute(
+                "SELECT COLUMN_NAME FROM information_schema.COLUMNS "
+                "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s",
+                (table,),
+            )
+            valid_columns = {row[0] for row in cursor.fetchall()}
+            unknown = [column for column in values if column not in valid_columns]
+            if unknown:
+                raise ValueError(f"Unknown column(s) for {table}: {', '.join(map(str, unknown))}")
+
+            columns = list(values)
+            column_sql = ", ".join(f"`{column}`" for column in columns)
+            placeholders = ", ".join(["%s"] * len(columns))
+            # Values are bound by the driver, which prevents SQL injection.
+            cursor.execute(
+                f"INSERT INTO `{table}` ({column_sql}) VALUES ({placeholders})",
+                [values[column] for column in columns],
+            )
+            new_id = cursor.lastrowid or 0
+        connection.commit()
+        return new_id
+    except (pymysql.err.IntegrityError, pymysql.err.DataError, pymysql.err.OperationalError) as exc:
+        # Duplicate keys, FK/CHECK failures, bad data types, and similar rejections.
+        connection.rollback()
+        raise ValueError(f"Could not insert into {table}: {exc.args[-1]}") from exc
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
 
 
 def delete_record(table: str, key_values: dict) -> None:

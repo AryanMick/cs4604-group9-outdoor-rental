@@ -3,13 +3,17 @@ from __future__ import annotations
 
 from datetime import datetime
 import math
+import secrets
 
-from flask import Flask, abort, redirect, render_template, request, url_for
+from flask import Flask, abort, flash, get_flashed_messages, redirect, render_template, request, session, url_for
 import pymysql
 
 import db_tools
+import table_actions
 
 app = Flask(__name__)
+# Per-process key: sessions (and flashes) reset whenever the server restarts.
+app.secret_key = secrets.token_hex(32)
 
 VIEWS = ("reservation_details", "employee_details")
 CHOICES = (*db_tools.TABLES, *VIEWS)
@@ -121,8 +125,40 @@ def show_table(table: str):
         )
 
 
-# TODO: Future action POST routes belong here, with server-side validation and
-# CSRF protection before calling table_actions; current routes remain read-only.
+@app.context_processor
+def inject_form_helpers():
+    """Expose the CSRF token and flashed messages to every template."""
+    if "csrf_token" not in session:
+        session["csrf_token"] = secrets.token_hex(16)
+    return {
+        "csrf_token": session["csrf_token"],
+        "messages": get_flashed_messages(with_categories=True),
+        "insertable": set(table_actions.TABLE_PRIMARY_KEYS),
+    }
+
+
+@app.route("/table/<table>/insert", methods=["POST"])
+def insert_row(table: str):
+    if table not in table_actions.TABLE_PRIMARY_KEYS:
+        abort(404)
+    token = session.get("csrf_token")
+    if not token or not secrets.compare_digest(token, request.form.get("csrf_token", "")):
+        abort(400)
+    # Blank fields are left out so the database applies AUTO_INCREMENT/NULL defaults.
+    values = {
+        name: value.strip()
+        for name, value in request.form.items()
+        if name != "csrf_token" and value.strip() != ""
+    }
+    try:
+        new_id = table_actions.insert_record(table, values)
+        flash(f"Record added to {table}" + (f" (id {new_id})." if new_id else "."), "success")
+    except (ValueError, RuntimeError, pymysql.MySQLError) as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("show_table", table=table))
+
+
+# TODO: Delete POST route goes here; reuse the CSRF check above before calling table_actions.
 
 
 if __name__ == "__main__":

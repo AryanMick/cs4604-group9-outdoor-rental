@@ -137,3 +137,10 @@ tbody tr:nth-child(even) { background: #eef4f1; }
   .count-grid { grid-template-columns: repeat(2, 1fr); }
   .table-picker { align-items: stretch; flex-direction: column; }
 }
+
+.heading-actions { display: flex; gap: .5rem; align-items: center; }
+.insert-dialog { border: 1px solid #ccc; border-radius: 8px; padding: 1.25rem; width: min(560px, 92vw); }
+.insert-dialog form { display: grid; gap: .75rem; }
+.insert-dialog h3 { margin: 0; }
+.insert-dialog label { display: flex; flex-direction: column; font-size: .85rem; }
+.dialog-actions { display: flex; gap: .5rem; justify-content: flex-end; }

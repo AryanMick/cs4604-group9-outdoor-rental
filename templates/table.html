@@ -12,10 +12,38 @@
       <h2>{{ table }}</h2>
       <p>{{ row_count }} rows · page {{ page }} of {{ total_pages }} · 20 rows per page</p>
     </div>
-    <a class="refresh" href="{{ url_for('show_table', table=table, page=page) }}">Refresh data</a>
+    <div class="heading-actions">
+      {% if table in insertable %}<button type="button" id="add-row-btn">Add record</button>{% endif %}
+      <a class="refresh" href="{{ url_for('show_table', table=table, page=page) }}">Refresh data</a>
+    </div>
   </section>
 
-  {# TODO: Future insert form for base tables, after server-side validation/routes exist. #}
+  {% for category, message in messages %}
+    <section class="status {{ 'success' if category == 'success' else 'error' }}"><span>{{ message }}</span></section>
+  {% endfor %}
+
+  {% if table in insertable %}
+    <dialog id="insert-dialog" class="insert-dialog">
+      <form action="{{ url_for('insert_row', table=table) }}" method="post">
+        <h3>Add a record to {{ table }}</h3>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        {% for column in columns %}
+          <label>{{ column }}
+            <input type="text" name="{{ column }}" placeholder="leave blank for auto/NULL">
+          </label>
+        {% endfor %}
+        <div class="dialog-actions">
+          <button type="submit">Insert record</button>
+          <button type="button" id="insert-cancel">Cancel</button>
+        </div>
+      </form>
+    </dialog>
+    <script>
+      const dialog = document.getElementById('insert-dialog');
+      document.getElementById('add-row-btn').addEventListener('click', () => dialog.showModal());
+      document.getElementById('insert-cancel').addEventListener('click', () => dialog.close());
+    </script>
+  {% endif %}
   <div class="table-wrap">
     <table>
       <thead>
