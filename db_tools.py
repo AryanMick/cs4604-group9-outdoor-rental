@@ -40,7 +40,7 @@ def load_config() -> dict:
     """Read and validate the private connection settings."""
     if not CONFIG_FILE.is_file():
         raise RuntimeError(
-            "Copy db_config.example.json to db_config.json and enter your MySQL credentials."
+            "Run python start.py to enter your MySQL connection settings."
         )
     try:
         settings = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
@@ -53,7 +53,7 @@ def load_config() -> dict:
         }
     except (OSError, ValueError, KeyError, TypeError) as exc:
         raise RuntimeError(
-            "Check db_config.json. It must use the same fields as db_config.example.json."
+            "Check db_config.json. Required fields: host, port, database, user, password."
         ) from exc
     if not re.fullmatch(r"[A-Za-z0-9_]+", config["database"]):
         raise RuntimeError("The database name may contain only letters, numbers, and underscores.")

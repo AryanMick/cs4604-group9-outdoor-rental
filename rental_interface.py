@@ -1,4 +1,4 @@
-"""Read-only Flask interface for the Outdoor Rental MySQL database."""
+"""Flask interface for the Outdoor Rental MySQL database."""
 from __future__ import annotations
 
 from datetime import datetime

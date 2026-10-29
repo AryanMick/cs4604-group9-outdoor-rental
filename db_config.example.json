@@ -1,7 +1,0 @@
-{
-  "host": "127.0.0.1",
-  "port": 3306,
-  "database": "outdoor_rental_group9",
-  "user": "YOUR_MYSQL_USERNAME",
-  "password": "YOUR_MYSQL_PASSWORD"
-}
