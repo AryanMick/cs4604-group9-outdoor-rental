@@ -31,6 +31,50 @@ header p { margin: 0; color: #d6e6df; font-size: 14px; }
   cursor: pointer;
 }
 
+.login-link, button, .refresh {
+  border: 0;
+  border-radius: 5px;
+  padding: 9px 14px;
+  background: #4b93c4;
+  color: #1d1d1d;
+  font-weight: bold;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.make-admin-link, button, .refresh {
+  border: 0;
+  border-radius: 5px;
+  padding: 9px 14px;
+  background: #24ce24;
+  color: #1d1d1d;
+  font-weight: bold;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.remove-admin-link, button, .refresh {
+  border: 0;
+  border-radius: 5px;
+  padding: 9px 14px;
+  background: #abc035;
+  color: #1d1d1d;
+  font-weight: bold;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.logout-link, button, .refresh {
+  border: 0;
+  border-radius: 5px;
+  padding: 9px 14px;
+  background: #ee4a4a;
+  color: #1d1d1d;
+  font-weight: bold;
+  text-decoration: none;
+  cursor: pointer;
+}
+
 main { width: 94%; max-width: 1360px; margin: 14px auto 24px; }
 .status {
   display: grid;

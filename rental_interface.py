@@ -18,6 +18,8 @@ app.secret_key = secrets.token_hex(32)
 VIEWS = ("reservation_details", "employee_details")
 CHOICES = (*db_tools.TABLES, *VIEWS)
 ROWS_PER_PAGE = 20
+LOGGED_IN = False
+IS_ADMIN = False
 
 
 def read_database(table: str | None = None, page: int = 1) -> dict:
@@ -74,11 +76,13 @@ def read_database(table: str | None = None, page: int = 1) -> dict:
 def dashboard():
     try:
         data = read_database()
-        return render_template("index.html", choices=CHOICES, error=None, **data)
+        return render_template("index.html", logged_in=LOGGED_IN, is_admin=IS_ADMIN, choices=CHOICES, error=None, **data)
     except (RuntimeError, pymysql.MySQLError) as exc:
         return (
             render_template(
                 "index.html",
+                logged_in=LOGGED_IN,
+                is_admin=IS_ADMIN,
                 choices=CHOICES,
                 connection=None,
                 counts={},
@@ -92,6 +96,8 @@ def dashboard():
 @app.route("/go")
 def choose_table():
     table = request.args.get("table", "")
+    if not table:
+        return redirect(request.referrer or url_for("dashboard"))
     if table not in CHOICES:
         abort(404)
     return redirect(url_for("show_table", table=table))
@@ -99,16 +105,20 @@ def choose_table():
 
 @app.route("/table/<table>")
 def show_table(table: str):
+    if not LOGGED_IN:
+        abort(401)
     if table not in CHOICES:
         abort(404)
     try:
         page = request.args.get("page", default=1, type=int) or 1
         data = read_database(table, page)
-        return render_template("table.html", choices=CHOICES, error=None, **data)
+        return render_template("table.html", logged_in=LOGGED_IN, is_admin=IS_ADMIN, choices=CHOICES, error=None, **data)
     except (RuntimeError, pymysql.MySQLError) as exc:
         return (
             render_template(
                 "table.html",
+                logged_in=LOGGED_IN,
+                is_admin=IS_ADMIN,
                 choices=CHOICES,
                 table=table,
                 connection=None,
@@ -140,6 +150,10 @@ def inject_form_helpers():
 
 @app.route("/table/<table>/insert", methods=["POST"])
 def insert_row(table: str):
+    if not LOGGED_IN:
+        abort(401)
+    if not IS_ADMIN:
+        abort(403)
     if table not in table_actions.TABLE_PRIMARY_KEYS:
         abort(404)
     token = session.get("csrf_token")
@@ -161,6 +175,10 @@ def insert_row(table: str):
 
 @app.route("/table/<table>/delete", methods=["POST"])
 def delete_row(table: str):
+    if not LOGGED_IN:
+        abort(401)
+    if not IS_ADMIN:
+        abort(403)
     if table not in table_actions.TABLE_PRIMARY_KEYS:
         abort(404)
     token = session.get("csrf_token")
@@ -178,6 +196,33 @@ def delete_row(table: str):
         flash(str(exc), "error")
     return redirect(url_for("show_table", table=table))
 
+@app.route("/login", methods=["POST"])
+def login():
+    global LOGGED_IN
+    LOGGED_IN = True
+    return redirect(request.referrer or url_for("dashboard"))
+
+@app.route("/register", methods=["POST"])
+def register():
+    global LOGGED_IN
+    LOGGED_IN = True
+    return redirect(request.referrer or url_for("dashboard"))
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    global LOGGED_IN, IS_ADMIN
+    LOGGED_IN = False
+    IS_ADMIN = False
+    return redirect(url_for("dashboard"))
+
+@app.route("/toggle_admin", methods=["POST"])
+def toggle_admin():
+    global LOGGED_IN, IS_ADMIN
+    if (LOGGED_IN):
+        IS_ADMIN = not IS_ADMIN
+    else:
+        abort(401)
+    return redirect(request.referrer or url_for("dashboard"))
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5001, debug=False)

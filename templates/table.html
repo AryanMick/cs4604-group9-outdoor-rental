@@ -13,7 +13,7 @@
       <p>{{ row_count }} rows · page {{ page }} of {{ total_pages }} · 20 rows per page</p>
     </div>
     <div class="heading-actions">
-      {% if table in insertable %}<button type="button" id="add-row-btn">Add record</button>{% endif %}
+      {% if logged_in and is_admin and table in insertable %}<button type="button" id="add-row-btn">Add record</button>{% endif %}
       <a class="refresh" href="{{ url_for('show_table', table=table, page=page) }}">Refresh data</a>
     </div>
   </section>
@@ -22,7 +22,7 @@
     <section class="status {{ 'success' if category == 'success' else 'error' }}"><span>{{ message }}</span></section>
   {% endfor %}
 
-  {% if table in insertable %}
+  {% if logged_in and is_admin and table in insertable %}
     <dialog id="insert-dialog" class="insert-dialog">
       <form action="{{ url_for('insert_row', table=table) }}" method="post">
         <h3>Add a record to {{ table }}</h3>
@@ -45,37 +45,41 @@
     </script>
   {% endif %}
   <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          {% for column in columns %}<th>{{ column }}</th>{% endfor %}
-          {% if table in primary_keys %}<th>Actions</th>{% endif %}
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in rows %}
+    {% if logged_in %}
+      <table>
+        <thead>
           <tr>
-            {% for value in row %}
-              <td>{{ "NULL" if value is none else value }}</td>
-            {% endfor %}
-            {% if table in primary_keys %}
-              <td>
-                <form action="{{ url_for('delete_row', table=table) }}" method="post"
-                      onsubmit="return confirm('Delete this record? This cannot be undone.');">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                  {% for key in primary_keys[table] %}
-                    <input type="hidden" name="{{ key }}" value="{{ row[columns.index(key)] }}">
-                  {% endfor %}
-                  <button type="submit" class="delete-button">Delete</button>
-                </form>
-              </td>
-            {% endif %}
+            {% for column in columns %}<th>{{ column }}</th>{% endfor %}
+            {% if is_admin and table in primary_keys %}<th>Actions</th>{% endif %}
           </tr>
-        {% else %}
-          <tr><td class="empty" colspan="{{ columns|length or 1 }}">No rows available.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            <tr>
+              {% for value in row %}
+                <td>{{ "NULL" if value is none else value }}</td>
+              {% endfor %}
+              {% if is_admin and table in primary_keys %}
+                <td>
+                  <form action="{{ url_for('delete_row', table=table) }}" method="post"
+                        onsubmit="return confirm('Delete this record? This cannot be undone.');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    {% for key in primary_keys[table] %}
+                      <input type="hidden" name="{{ key }}" value="{{ row[columns.index(key)] }}">
+                    {% endfor %}
+                    <button type="submit" class="delete-button">Delete</button>
+                  </form>
+                </td>
+              {% endif %}
+            </tr>
+          {% else %}
+            <tr><td class="empty" colspan="{{ columns|length or 1 }}">No rows available.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>You must be logged in</p>
+    {% endif %}
   </div>
 
   <nav class="pagination" aria-label="Table pages">

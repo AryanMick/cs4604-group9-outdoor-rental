@@ -12,7 +12,30 @@
       <h1>Outdoor Equipment Rental Management System</h1>
       <p>CS4604 · Group 9 · MySQL 8.4 · Python 3 / Flask</p>
     </div>
+    <div>
+    {% if logged_in %}
+      {% if is_admin %}
+        <form action="{{ url_for('toggle_admin') }}" method="post" style="display: inline;">
+          <button class="remove-admin-link" type="submit">Remove Admin</button>
+        </form>
+      {% else %}
+        <form action="{{ url_for('toggle_admin') }}" method="post" style="display: inline;">
+          <button class="make-admin-link" type="submit">Make Admin</button>
+        </form>
+      {% endif %}
+      <form action="{{ url_for('logout') }}" method="post" style="display: inline;">
+        <button class="logout-link" type="submit">Logout</button>
+      </form>
+    {% else %}
+      <form action="{{ url_for('login') }}" method="post" style="display: inline;">
+        <button class="login-link" type="submit">Login</button>
+      </form>
+      <form action="{{ url_for('register') }}" method="post" style="display: inline;">
+        <button class="login-link" type="submit">Register</button>
+      </form>
+    {% endif %}
     <a class="home-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+    </div>
   </header>
 
   <main>
@@ -29,18 +52,22 @@
         <span>Connection ID: {{ connection.connection_id }} · Checked: {{ connection.checked }}</span>
       </section>
     {% endif %}
-
-    <form class="table-picker" action="{{ url_for('choose_table') }}" method="get">
-      <label for="table">Select a table or view</label>
-      <select id="table" name="table">
-        {% for name in choices %}
-          <option value="{{ name }}" {% if table is defined and table == name %}selected{% endif %}>
-            {{ name }}
+    {% if logged_in %}
+      <form class="table-picker" action="{{ url_for('choose_table') }}" method="get">
+        <label for="table">Select a table or view</label>
+        <select id="table" name="table" onchange="this.form.submit()">
+          <option value="" {% if table is not defined %}selected{% endif %}>
+            -- Select a table or view --
           </option>
-        {% endfor %}
-      </select>
-      <button type="submit">View data</button>
-    </form>
+          {% for name in choices %}
+            <option value="{{ name }}" {% if table is defined and table == name %}selected{% endif %}>
+              {{ name }}
+            </option>
+          {% endfor %}
+        </select>
+        <!-- <button type="submit">View data</button> -->
+      </form>
+    {% endif %}
 
     {% block content %}{% endblock %}
   </main>
