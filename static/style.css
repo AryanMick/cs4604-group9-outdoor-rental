@@ -144,3 +144,4 @@ tbody tr:nth-child(even) { background: #eef4f1; }
 .insert-dialog h3 { margin: 0; }
 .insert-dialog label { display: flex; flex-direction: column; font-size: .85rem; }
 .dialog-actions { display: flex; gap: .5rem; justify-content: flex-end; }
+.delete-button { padding: 5px 9px; background: #a83232; color: white; }

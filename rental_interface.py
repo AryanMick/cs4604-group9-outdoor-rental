@@ -134,6 +134,7 @@ def inject_form_helpers():
         "csrf_token": session["csrf_token"],
         "messages": get_flashed_messages(with_categories=True),
         "insertable": set(table_actions.TABLE_PRIMARY_KEYS),
+        "primary_keys": table_actions.TABLE_PRIMARY_KEYS,
     }
 
 
@@ -158,7 +159,24 @@ def insert_row(table: str):
     return redirect(url_for("show_table", table=table))
 
 
-# TODO: Delete POST route goes here; reuse the CSRF check above before calling table_actions.
+@app.route("/table/<table>/delete", methods=["POST"])
+def delete_row(table: str):
+    if table not in table_actions.TABLE_PRIMARY_KEYS:
+        abort(404)
+    token = session.get("csrf_token")
+    if not token or not secrets.compare_digest(token, request.form.get("csrf_token", "")):
+        abort(400)
+    key_values = {
+        name: value.strip()
+        for name, value in request.form.items()
+        if name != "csrf_token"
+    }
+    try:
+        table_actions.delete_record(table, key_values)
+        flash(f"Record deleted from {table}.", "success")
+    except (ValueError, RuntimeError, pymysql.MySQLError) as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("show_table", table=table))
 
 
 if __name__ == "__main__":

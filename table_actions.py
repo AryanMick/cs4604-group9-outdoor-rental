@@ -68,8 +68,41 @@ def insert_record(table: str, values: dict) -> int:
 
 
 def delete_record(table: str, key_values: dict) -> None:
-    """Future deletion entry point; always raises until implemented."""
-    # TODO: Require every primary-key field, including both composite-key fields.
-    # TODO: Validate the table/key allowlists, parameterize values, and handle
-    # transaction commit/rollback and foreign-key errors without cascading deletes.
-    raise NotImplementedError("Record deletion is not implemented.")
+    """Delete one row identified by its complete primary key.
+
+    Raises ValueError for bad input or constraint/FK violations, and RuntimeError
+    for database setup problems. Foreign-key restrictions prevent deleting a
+    referenced row; related rows are never deleted automatically.
+    """
+    if table not in TABLE_PRIMARY_KEYS:
+        raise ValueError(f"Unknown table: {table!r}")
+    if not isinstance(key_values, dict) or not key_values:
+        raise ValueError("Primary-key values must be provided as a non-empty dictionary.")
+
+    primary_keys = TABLE_PRIMARY_KEYS[table]
+    missing = [column for column in primary_keys if column not in key_values]
+    extra = [column for column in key_values if column not in primary_keys]
+    if missing:
+        raise ValueError(f"Missing primary-key field(s) for {table}: {', '.join(missing)}")
+    if extra:
+        raise ValueError(f"Unexpected key field(s) for {table}: {', '.join(map(str, extra))}")
+    if any(key_values[column] is None for column in primary_keys):
+        raise ValueError("Primary-key values cannot be None.")
+
+    import pymysql  # imported here so db_tools can report a missing package first
+
+    connection = db_tools.connect()
+    try:
+        conditions = " AND ".join(f"`{column}` = %s" for column in primary_keys)
+        parameters = [key_values[column] for column in primary_keys]
+        with connection.cursor() as cursor:
+            cursor.execute(f"DELETE FROM `{table}` WHERE {conditions}", parameters)
+        connection.commit()
+    except (pymysql.err.IntegrityError, pymysql.err.DataError, pymysql.err.OperationalError) as exc:
+        connection.rollback()
+        raise ValueError(f"Could not delete from {table}: {exc.args[-1]}") from exc
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()

@@ -49,6 +49,7 @@
       <thead>
         <tr>
           {% for column in columns %}<th>{{ column }}</th>{% endfor %}
+          {% if table in primary_keys %}<th>Actions</th>{% endif %}
         </tr>
       </thead>
       <tbody>
@@ -57,7 +58,18 @@
             {% for value in row %}
               <td>{{ "NULL" if value is none else value }}</td>
             {% endfor %}
-            {# TODO: Future row delete control must carry every primary-key field. #}
+            {% if table in primary_keys %}
+              <td>
+                <form action="{{ url_for('delete_row', table=table) }}" method="post"
+                      onsubmit="return confirm('Delete this record? This cannot be undone.');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  {% for key in primary_keys[table] %}
+                    <input type="hidden" name="{{ key }}" value="{{ row[columns.index(key)] }}">
+                  {% endfor %}
+                  <button type="submit" class="delete-button">Delete</button>
+                </form>
+              </td>
+            {% endif %}
           </tr>
         {% else %}
           <tr><td class="empty" colspan="{{ columns|length or 1 }}">No rows available.</td></tr>
