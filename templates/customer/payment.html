@@ -1,0 +1,28 @@
+{% extends "customer/base.html" %}
+{% block title %}Payment{% endblock %}
+{% block content %}
+  <h1>Payment</h1>
+  <p class="muted">Demonstration payment: nothing is charged, and only the last 4 digits of the card number are saved.</p>
+
+  <section class="cart-summary">
+    <p>{{ cart['items']|length }} reservation{{ '' if cart['items']|length == 1 else 's' }}</p>
+    <p>Total <strong class="price">{{ cart['total']|money }}</strong></p>
+  </section>
+
+  <form class="payment-form" action="{{ url_for('customer.checkout') }}" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>Card number
+      <input name="card_number" type="text" inputmode="numeric" autocomplete="off" required>
+    </label>
+    <label>Expiration date
+      <input name="expiry" type="month" autocomplete="off" required>
+    </label>
+    <label>Security code
+      <input name="security_code" type="password" inputmode="numeric" autocomplete="off" required>
+    </label>
+    <div class="form-actions">
+      <a class="button button-secondary" href="{{ url_for('customer.cart') }}">Back to cart</a>
+      <button class="button button-primary" type="submit">Pay {{ cart['total']|money }}</button>
+    </div>
+  </form>
+{% endblock %}

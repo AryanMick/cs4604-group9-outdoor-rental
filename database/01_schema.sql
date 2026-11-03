@@ -1,5 +1,6 @@
 -- CS4604 Group 9 | Outdoor Equipment Rental Management System
 -- MySQL 8.4. Run once in an empty outdoor_rental_group9 database.
+-- Run order: 01_schema.sql, 02_sample_data.sql, 03_triggers.sql (db_tools.py does this).
 
 CREATE TABLE business (
     business_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -12,9 +13,17 @@ CREATE TABLE business (
 CREATE TABLE rental_equipment (
     equipment_id INT AUTO_INCREMENT PRIMARY KEY,
     equipment_type VARCHAR(60) NOT NULL,
+    description VARCHAR(255) NOT NULL,
+    rate DECIMAL(10,2) NOT NULL,
+    rate_unit VARCHAR(10) NOT NULL,
+    -- Path relative to the static/ folder.
+    image_url VARCHAR(255) NOT NULL DEFAULT 'img/placeholder.jpg',
     status VARCHAR(20) NOT NULL,
     business_id INT NOT NULL,
     CONSTRAINT equipment_type_not_blank CHECK (TRIM(equipment_type) <> ''),
+    CONSTRAINT equipment_description_not_blank CHECK (TRIM(description) <> ''),
+    CONSTRAINT equipment_rate_positive CHECK (rate > 0),
+    CONSTRAINT equipment_rate_unit_valid CHECK (rate_unit IN ('HOUR', 'DAY')),
     CONSTRAINT equipment_status_valid CHECK (status IN ('AVAILABLE', 'MAINTENANCE', 'RETIRED')),
     CONSTRAINT equipment_business_fk FOREIGN KEY (business_id) REFERENCES business (business_id)
 ) ENGINE=InnoDB;
@@ -30,27 +39,33 @@ CREATE TABLE customer (
     CONSTRAINT customer_email_unique UNIQUE (email)
 ) ENGINE=InnoDB;
 
+-- One payment can cover several reservations; only the last 4 card digits are kept.
+CREATE TABLE payment (
+    payment_id INT AUTO_INCREMENT PRIMARY KEY,
+    amount DECIMAL(10,2) NOT NULL,
+    payment_date DATETIME NOT NULL,
+    card_last4 CHAR(4) NOT NULL,
+    CONSTRAINT payment_amount_positive CHECK (amount > 0),
+    CONSTRAINT payment_card_last4_digits CHECK (card_last4 REGEXP '^[0-9]{4}$')
+) ENGINE=InnoDB;
+
+-- Only RESERVED rows block other bookings; 03_triggers.sql rejects overlaps.
 CREATE TABLE reservation (
     reservation_id INT AUTO_INCREMENT PRIMARY KEY,
     equipment_id INT NOT NULL,
     customer_id INT NOT NULL,
+    payment_id INT NULL,
     status VARCHAR(20) NOT NULL,
-    checkout_date DATE NOT NULL,
-    due_date DATE NOT NULL,
-    CONSTRAINT reservation_status_valid CHECK (status IN ('RESERVED', 'CHECKED_OUT', 'RETURNED', 'CANCELLED')),
+    checkout_date DATETIME NOT NULL,
+    due_date DATETIME NOT NULL,
+    CONSTRAINT reservation_status_valid CHECK (status IN ('RESERVED', 'RETURNED', 'CANCELLED')),
     CONSTRAINT reservation_date_order CHECK (due_date > checkout_date),
+    CONSTRAINT reservation_slot_aligned CHECK (
+        MINUTE(checkout_date) IN (0, 30) AND SECOND(checkout_date) = 0
+        AND MINUTE(due_date) IN (0, 30) AND SECOND(due_date) = 0),
     CONSTRAINT reservation_equipment_fk FOREIGN KEY (equipment_id) REFERENCES rental_equipment (equipment_id),
-    CONSTRAINT reservation_customer_fk FOREIGN KEY (customer_id) REFERENCES customer (customer_id)
-) ENGINE=InnoDB;
-
-CREATE TABLE payment (
-    payment_id INT AUTO_INCREMENT PRIMARY KEY,
-    reservation_id INT NOT NULL,
-    amount DECIMAL(10,2) NOT NULL,
-    payment_date DATE NOT NULL,
-    CONSTRAINT payment_reservation_unique UNIQUE (reservation_id),
-    CONSTRAINT payment_amount_positive CHECK (amount > 0),
-    CONSTRAINT payment_reservation_fk FOREIGN KEY (reservation_id) REFERENCES reservation (reservation_id)
+    CONSTRAINT reservation_customer_fk FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
+    CONSTRAINT reservation_payment_fk FOREIGN KEY (payment_id) REFERENCES payment (payment_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE manager (
@@ -104,23 +119,51 @@ CREATE TABLE admin_privileges (
     CONSTRAINT privileges_admin_fk FOREIGN KEY (admin_id) REFERENCES admin (admin_id)
 ) ENGINE=InnoDB;
 
+-- A customer's cart exists only while logged in: created at login, deleted at logout.
+CREATE TABLE cart (
+    cart_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT cart_customer_unique UNIQUE (customer_id),
+    CONSTRAINT cart_customer_fk FOREIGN KEY (customer_id) REFERENCES customer (customer_id)
+) ENGINE=InnoDB;
+
+-- Cleared when the cart is booked or removed by the customer.
+CREATE TABLE cart_item (
+    cart_item_id INT AUTO_INCREMENT PRIMARY KEY,
+    cart_id INT NOT NULL,
+    equipment_id INT NOT NULL,
+    start_at DATETIME NOT NULL,
+    end_at DATETIME NOT NULL,
+    CONSTRAINT cart_item_equipment_unique UNIQUE (cart_id, equipment_id),
+    CONSTRAINT cart_item_date_order CHECK (end_at > start_at),
+    CONSTRAINT cart_item_slot_aligned CHECK (
+        MINUTE(start_at) IN (0, 30) AND SECOND(start_at) = 0
+        AND MINUTE(end_at) IN (0, 30) AND SECOND(end_at) = 0),
+    CONSTRAINT cart_item_cart_fk FOREIGN KEY (cart_id) REFERENCES cart (cart_id),
+    CONSTRAINT cart_item_equipment_fk FOREIGN KEY (equipment_id) REFERENCES rental_equipment (equipment_id)
+) ENGINE=InnoDB;
+
 CREATE INDEX equipment_business_idx ON rental_equipment (business_id);
 CREATE INDEX reservation_equipment_idx ON reservation (equipment_id);
 CREATE INDEX reservation_customer_idx ON reservation (customer_id);
+CREATE INDEX reservation_payment_idx ON reservation (payment_id);
+CREATE INDEX cart_item_equipment_idx ON cart_item (equipment_id);
 CREATE INDEX manager_business_idx ON manager (business_id);
 CREATE INDEX employee_manager_idx ON employee (manager_id);
 CREATE INDEX access_employee_idx ON defines_access (employee_id);
 
 -- Views show joined information without duplicating it in the base tables.
+-- payment_amount is the whole payment, which may cover several reservations.
 CREATE VIEW reservation_details AS
 SELECT r.reservation_id, CONCAT(c.first_name, ' ', c.last_name) AS customer,
        e.equipment_id, e.equipment_type, b.business_name,
-       r.status, r.checkout_date, r.due_date, p.amount AS payment_amount
+       r.status, r.checkout_date, r.due_date, r.payment_id, p.amount AS payment_amount
 FROM reservation AS r
 JOIN customer AS c ON c.customer_id = r.customer_id
 JOIN rental_equipment AS e ON e.equipment_id = r.equipment_id
 JOIN business AS b ON b.business_id = e.business_id
-LEFT JOIN payment AS p ON p.reservation_id = r.reservation_id;
+LEFT JOIN payment AS p ON p.payment_id = r.payment_id;
 
 CREATE VIEW employee_details AS
 SELECT e.employee_id, e.first_name, e.last_name, e.email,

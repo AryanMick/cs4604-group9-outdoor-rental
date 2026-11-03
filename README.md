@@ -25,11 +25,26 @@ Stop with **Ctrl+C** and run the same command next time
 
 ## Use it
 
-- Select a table to see its data
-- Click **Add record**, fill in the fields, then **Insert record**
-- Use `YYYY-MM-DD` for dates and existing IDs for related records
+- **Login** or **Register** opens the dashboard; select a table to see its data
+- **Make Admin** lets you change data: click **Add record**, fill in the fields (starred fields are required), then **Insert record**
+- Use `YYYY-MM-DD HH:MM:SS` for date and time fields and existing IDs for related records
 - Click **Delete** beside a row and confirm — MySQL blocks deletion when another record depends on it
+- **Log in as Customer** opens the customer view: choose a business, browse its equipment, add items to the cart for a chosen time, then pay (a demonstration payment; only the last 4 card digits are saved)
+- The customer's cart is deleted when they log out
 - Open MySQL Workbench with the same login to run SQL, such as `SELECT * FROM customer;`
+
+## Reset the database
+
+The setup only fills an empty database. After the SQL files change, drop the database and start again:
+
+```sh
+mysql -u <your user> -p -e "DROP DATABASE outdoor_rental_group9;"
+python start.py
+```
+
+Use your own database name if you changed it in `db_config.json`. The MySQL account needs permission to create triggers and routines.
+
+Rental photos live in `static/img/`; `placeholder.jpg` is the default for equipment without its own `image_url`.
 
 ## If it fails
 
@@ -44,7 +59,9 @@ Keep `db_config.json` and `.venv` on your computer only
 
 - `start.py` — starts the project
 - `db_tools.py` — connects to MySQL and loads the SQL files
-- `database/` — table definitions and sample data
-- `rental_interface.py` and `table_actions.py` — pages and database actions
-- `templates/` and `static/` — HTML and CSS
+- `database/` — table definitions, sample data, and reservation triggers
+- `rental_interface.py` and `table_actions.py` — admin pages and database actions
+- `customer_routes.py` and `customer_service.py` — customer pages and their database logic
+- `templates/` and `static/` — HTML, CSS, and JavaScript (`static/vendor/flatpickr` is the calendar library)
+- `tests/` — unit tests: `python -m unittest discover tests`
 - `requirements.txt` — Python packages

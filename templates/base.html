@@ -33,6 +33,10 @@
       <form action="{{ url_for('register') }}" method="post" style="display: inline;">
         <button class="login-link" type="submit">Register</button>
       </form>
+      <form action="{{ url_for('customer.login_customer') }}" method="post" style="display: inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="login-link" type="submit">Log in as Customer</button>
+      </form>
     {% endif %}
     <a class="home-link" href="{{ url_for('dashboard') }}">Dashboard</a>
     </div>

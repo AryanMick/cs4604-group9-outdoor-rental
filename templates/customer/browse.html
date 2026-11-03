@@ -1,0 +1,95 @@
+{% extends "customer/base.html" %}
+{% block title %}{{ business.business_name }}{% endblock %}
+{% block head_extra %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/flatpickr/flatpickr.min.css') }}">
+{% endblock %}
+{% block content %}
+  <h1>{{ business.business_name }}</h1>
+  <p class="muted">{{ business.address }}</p>
+
+  <form class="filter-bar" method="get" action="{{ url_for('customer.browse', business_id=business.business_id) }}">
+    <label>Needed from
+      <input id="filter-from" name="from" type="text" value="{{ filter_from }}" placeholder="Any time" autocomplete="off">
+    </label>
+    <label>Needed until
+      <input id="filter-to" name="to" type="text" value="{{ filter_to }}" placeholder="Any time" autocomplete="off">
+    </label>
+    <button class="button" type="submit">Filter</button>
+    {% if filter_active or filter_error %}
+      <a class="button button-secondary" href="{{ url_for('customer.browse', business_id=business.business_id) }}">Clear</a>
+    {% endif %}
+  </form>
+  {% if filter_error %}<p class="notice notice-error">{{ filter_error }}</p>{% endif %}
+  {% if filter_active %}
+    <p class="muted">Showing equipment with availability between {{ filter_from }} and {{ filter_to }}.</p>
+  {% endif %}
+
+  {% if equipment %}
+    <div class="equipment-grid">
+      {% for item in equipment %}
+        <article class="equipment-card">
+          <img src="{{ url_for('static', filename=item.image_url) }}" alt="{{ item.equipment_type }}" loading="lazy">
+          <div class="card-body">
+            <h2>{{ item.equipment_type }}</h2>
+            <p class="price">{{ item.rate|money }} / {{ 'hour' if item.rate_unit == 'HOUR' else 'day' }}</p>
+            {% if item.availability == 'partial' %}
+              <span class="badge badge-partial" title="Only part of your selected time is free">Partial availability</span>
+            {% elif item.availability == 'maintenance' %}
+              <span class="badge badge-maintenance">Under maintenance</span>
+            {% endif %}
+            <p class="description">{{ item.description }}</p>
+          </div>
+          <button class="button add-to-cart" type="button"
+                  data-equipment-id="{{ item.equipment_id }}"
+                  data-name="{{ item.equipment_type }}">Add to cart</button>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="muted">No equipment matches{% if filter_active %} that time range{% endif %}.</p>
+  {% endif %}
+
+  <div id="panel-backdrop" class="panel-backdrop"></div>
+  <aside id="booking-panel" class="booking-panel" aria-hidden="true" aria-labelledby="panel-title">
+    <header class="panel-header">
+      <h2 id="panel-title" tabindex="-1">Choose your rental time</h2>
+      <button id="panel-close" class="icon-button" type="button" aria-label="Close">&times;</button>
+    </header>
+    <p id="panel-rate" class="muted"></p>
+    <p id="panel-error" class="notice notice-error" role="alert" hidden></p>
+
+    <ul class="legend">
+      <li><span class="swatch swatch-free"></span>Available</li>
+      <li><span class="swatch swatch-partial"></span>Partly available</li>
+      <li><span class="swatch swatch-none"></span>Unavailable</li>
+    </ul>
+
+    <section>
+      <h3>1. Start day</h3>
+      <input id="start-day" type="text" class="calendar-input" tabindex="-1">
+      <div id="start-slots-wrap" hidden>
+        <h3>Start time</h3>
+        <div id="start-slots" class="slots"></div>
+      </div>
+    </section>
+
+    <section id="end-section" hidden>
+      <h3 id="end-day-title">2. End day</h3>
+      <input id="end-day" type="text" class="calendar-input" tabindex="-1">
+      <div id="end-slots-wrap" hidden>
+        <h3>End time</h3>
+        <div id="end-slots" class="slots"></div>
+      </div>
+    </section>
+
+    <p id="panel-summary" class="summary" hidden></p>
+    <button id="panel-submit" class="button button-primary" type="button" disabled>Add to cart</button>
+  </aside>
+{% endblock %}
+{% block scripts %}
+  <script src="{{ url_for('static', filename='vendor/flatpickr/flatpickr.min.js') }}"></script>
+  <script>window.CUSTOMER_URLS = {
+    availability: "{{ url_for('customer.equipment_availability', equipment_id=0) }}",
+    add: "{{ url_for('customer.add_to_cart') }}"
+  };</script>
+{% endblock %}

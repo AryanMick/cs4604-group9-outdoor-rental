@@ -1,0 +1,45 @@
+{% extends "customer/base.html" %}
+{% block title %}Your cart{% endblock %}
+{% block content %}
+  <h1>Your cart</h1>
+
+  {% if cart['items'] %}
+    <div class="cart-list">
+      {% for item in cart['items'] %}
+        <article class="cart-card">
+          <img src="{{ url_for('static', filename=item.image_url) }}" alt="{{ item.equipment_type }}">
+          <div class="cart-details">
+            <h2>{{ item.equipment_type }}</h2>
+            <p class="muted">{{ item.business_name }}</p>
+            <p>{{ item.description }}</p>
+            <p><strong>From</strong> {{ item.start_at|fmt_dt }} <strong>to</strong> {{ item.end_at|fmt_dt }}
+               <span class="muted">({{ item.duration }})</span></p>
+            {% if item.problem %}<p class="notice notice-error">{{ item.problem }} Remove this item to continue.</p>{% endif %}
+          </div>
+          <div class="cart-side">
+            <p class="price">{{ item.price|money }}</p>
+            <form action="{{ url_for('customer.remove_from_cart', cart_item_id=item.cart_item_id) }}" method="post">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button class="button button-secondary" type="submit">Remove</button>
+            </form>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+
+    <section class="cart-summary">
+      <p>Total <strong class="price">{{ cart['total']|money }}</strong></p>
+      {% if cart['has_problem'] %}
+        <button class="button button-primary" type="button" disabled>Proceed to payment</button>
+      {% else %}
+        <a class="button button-primary" href="{{ url_for('customer.checkout') }}">Proceed to payment</a>
+      {% endif %}
+    </section>
+  {% else %}
+    <p class="muted">Your cart is empty.</p>
+  {% endif %}
+
+  <p>
+    <a href="{{ url_for('customer.browse', business_id=session['business_id']) if session.get('business_id') else url_for('customer.select_business') }}">&larr; Continue browsing</a>
+  </p>
+{% endblock %}

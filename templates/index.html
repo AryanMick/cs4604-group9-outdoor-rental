@@ -6,16 +6,19 @@
     <p>Correct the connection settings or start MySQL, then reload this page.</p>
   </section>
 {% else %}
+  {% for category, message in messages %}
+    <section class="status {{ 'success' if category == 'success' else 'error' }}"><span>{{ message }}</span></section>
+  {% endfor %}
   {% if logged_in %}
     <section class="section-heading">
       <div>
         <h2>Live row counts</h2>
-        <p>All ten base tables · {{ total_rows }} total records</p>
+        <p>All {{ base_tables|length }} base tables · {{ total_rows }} total records</p>
       </div>
     </section>
 
     <div class="count-grid">
-      {% for name in choices[:10] %}
+      {% for name in base_tables %}
         <a class="count-card" href="{{ url_for('show_table', table=name) }}">
           <span>{{ name }}</span>
           <strong>{{ counts.get(name, "—") }}</strong>

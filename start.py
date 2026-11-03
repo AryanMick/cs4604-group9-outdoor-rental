@@ -104,7 +104,8 @@ def prepare_database(db_tools) -> None:
         raise RuntimeError(
             "The configured database has an incomplete or different schema. "
             "Missing expected tables/views: " + ", ".join(missing) + ". "
-            "No data was changed. Inspect it or choose a new empty database in db_config.json."
+            "No data was changed. Inspect it, choose a new empty database in db_config.json, "
+            "or drop this database (DROP DATABASE " + settings["database"] + ";) and run start.py again."
         )
     print("Using the existing database; its data is preserved.")
 

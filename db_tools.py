@@ -21,11 +21,13 @@ TABLES = (
     "admin",
     "defines_access",
     "admin_privileges",
+    "cart",
+    "cart_item",
 )
 EXPECTED_COUNTS = {
     "business": 20,
     "rental_equipment": 40,
-    "customer": 30,
+    "customer": 31,
     "reservation": 40,
     "payment": 30,
     "manager": 20,
@@ -33,6 +35,8 @@ EXPECTED_COUNTS = {
     "admin": 20,
     "defines_access": 40,
     "admin_privileges": 40,
+    "cart": 0,
+    "cart_item": 0,
 }
 
 
@@ -108,11 +112,11 @@ def validate_server(connection) -> str:
     return version
 
 
-def sql_statements(filename: str) -> list[str]:
+def sql_statements(filename: str, delimiter: str = ";") -> list[str]:
     """Read the project's simple SQL files as individual statements."""
     text = (PACKAGE / "database" / filename).read_text(encoding="utf-8")
     lines = [line for line in text.splitlines() if not line.lstrip().startswith("--")]
-    return [statement.strip() for statement in "\n".join(lines).split(";") if statement.strip()]
+    return [statement.strip() for statement in "\n".join(lines).split(delimiter) if statement.strip()]
 
 
 def setup() -> None:
@@ -174,10 +178,21 @@ def setup() -> None:
                 "Sample-data loading failed and its transaction was rolled back. The schema remains "
                 "because MySQL DDL cannot be wrapped in an atomic transaction. No objects were deleted."
             ) from exc
+
+        try:
+            with connection.cursor() as cursor:
+                for statement in sql_statements("03_triggers.sql", delimiter="$$"):
+                    cursor.execute(statement)
+        except Exception as exc:
+            raise RuntimeError(
+                "Trigger setup failed after the schema and sample data were loaded. The account "
+                "needs the CREATE ROUTINE and TRIGGER privileges (and SET_USER_ID or SUPER when "
+                "binary logging is on). Drop the database and run start.py again."
+            ) from exc
     finally:
         connection.close()
 
-    print(f"Database created and 300 sample rows loaded with MySQL {version}.")
+    print(f"Database created and {sum(EXPECTED_COUNTS.values())} sample rows loaded with MySQL {version}.")
     status_report()
 
 

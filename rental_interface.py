@@ -9,17 +9,33 @@ from flask import Flask, abort, flash, get_flashed_messages, redirect, render_te
 import pymysql
 
 import db_tools
+import customer_routes
+import customer_service
 import table_actions
 
 app = Flask(__name__)
 # Per-process key: sessions (and flashes) reset whenever the server restarts.
 app.secret_key = secrets.token_hex(32)
+app.register_blueprint(customer_routes.bp)
 
 VIEWS = ("reservation_details", "employee_details")
 CHOICES = (*db_tools.TABLES, *VIEWS)
 ROWS_PER_PAGE = 20
-LOGGED_IN = False
-IS_ADMIN = False
+
+
+def is_staff() -> bool:
+    """True for the temporary Login/Register session that can open the dashboard."""
+    return session.get("role") == "staff"
+
+
+def is_admin() -> bool:
+    return is_staff() and session.get("is_admin", False)
+
+
+def deny_unless_staff() -> None:
+    """Abort with 403 for customers and 401 for visitors who are not logged in."""
+    if not is_staff():
+        abort(403 if session.get("role") == "customer" else 401)
 
 
 def read_database(table: str | None = None, page: int = 1) -> dict:
@@ -74,15 +90,15 @@ def read_database(table: str | None = None, page: int = 1) -> dict:
 
 @app.route("/")
 def dashboard():
+    if session.get("role") == "customer":
+        return redirect(url_for("customer.select_business"))
     try:
         data = read_database()
-        return render_template("index.html", logged_in=LOGGED_IN, is_admin=IS_ADMIN, choices=CHOICES, error=None, **data)
+        return render_template("index.html", choices=CHOICES, error=None, **data)
     except (RuntimeError, pymysql.MySQLError) as exc:
         return (
             render_template(
                 "index.html",
-                logged_in=LOGGED_IN,
-                is_admin=IS_ADMIN,
                 choices=CHOICES,
                 connection=None,
                 counts={},
@@ -95,6 +111,7 @@ def dashboard():
 
 @app.route("/go")
 def choose_table():
+    deny_unless_staff()
     table = request.args.get("table", "")
     if not table:
         return redirect(request.referrer or url_for("dashboard"))
@@ -105,20 +122,18 @@ def choose_table():
 
 @app.route("/table/<table>")
 def show_table(table: str):
-    if not LOGGED_IN:
-        abort(401)
+    deny_unless_staff()
     if table not in CHOICES:
         abort(404)
     try:
         page = request.args.get("page", default=1, type=int) or 1
         data = read_database(table, page)
-        return render_template("table.html", logged_in=LOGGED_IN, is_admin=IS_ADMIN, choices=CHOICES, error=None, **data)
+        required = table_actions.required_columns(table) if table in table_actions.TABLE_PRIMARY_KEYS else set()
+        return render_template("table.html", choices=CHOICES, error=None, required_columns=required, **data)
     except (RuntimeError, pymysql.MySQLError) as exc:
         return (
             render_template(
                 "table.html",
-                logged_in=LOGGED_IN,
-                is_admin=IS_ADMIN,
                 choices=CHOICES,
                 table=table,
                 connection=None,
@@ -129,6 +144,7 @@ def show_table(table: str):
                 row_count=0,
                 page=1,
                 total_pages=1,
+                required_columns=set(),
                 error=str(exc),
             ),
             503,
@@ -137,7 +153,7 @@ def show_table(table: str):
 
 @app.context_processor
 def inject_form_helpers():
-    """Expose the CSRF token and flashed messages to every template."""
+    """Expose the CSRF token, flashed messages, and login state to every template."""
     if "csrf_token" not in session:
         session["csrf_token"] = secrets.token_hex(16)
     return {
@@ -145,14 +161,16 @@ def inject_form_helpers():
         "messages": get_flashed_messages(with_categories=True),
         "insertable": set(table_actions.TABLE_PRIMARY_KEYS),
         "primary_keys": table_actions.TABLE_PRIMARY_KEYS,
+        "base_tables": db_tools.TABLES,
+        "logged_in": is_staff(),
+        "is_admin": is_admin(),
     }
 
 
 @app.route("/table/<table>/insert", methods=["POST"])
 def insert_row(table: str):
-    if not LOGGED_IN:
-        abort(401)
-    if not IS_ADMIN:
+    deny_unless_staff()
+    if not is_admin():
         abort(403)
     if table not in table_actions.TABLE_PRIMARY_KEYS:
         abort(404)
@@ -175,9 +193,8 @@ def insert_row(table: str):
 
 @app.route("/table/<table>/delete", methods=["POST"])
 def delete_row(table: str):
-    if not LOGGED_IN:
-        abort(401)
-    if not IS_ADMIN:
+    deny_unless_staff()
+    if not is_admin():
         abort(403)
     if table not in table_actions.TABLE_PRIMARY_KEYS:
         abort(404)
@@ -198,30 +215,30 @@ def delete_row(table: str):
 
 @app.route("/login", methods=["POST"])
 def login():
-    global LOGGED_IN
-    LOGGED_IN = True
+    session["role"] = "staff"
+    session["is_admin"] = False
     return redirect(request.referrer or url_for("dashboard"))
 
 @app.route("/register", methods=["POST"])
 def register():
-    global LOGGED_IN
-    LOGGED_IN = True
+    session["role"] = "staff"
+    session["is_admin"] = False
     return redirect(request.referrer or url_for("dashboard"))
 
 @app.route("/logout", methods=["POST"])
 def logout():
-    global LOGGED_IN, IS_ADMIN
-    LOGGED_IN = False
-    IS_ADMIN = False
+    if session.get("role") == "customer":
+        try:
+            customer_service.end_customer_session(session["customer_id"])
+        except (RuntimeError, pymysql.MySQLError):
+            pass  # The next customer login resets the cart anyway.
+    session.clear()
     return redirect(url_for("dashboard"))
 
 @app.route("/toggle_admin", methods=["POST"])
 def toggle_admin():
-    global LOGGED_IN, IS_ADMIN
-    if (LOGGED_IN):
-        IS_ADMIN = not IS_ADMIN
-    else:
-        abort(401)
+    deny_unless_staff()
+    session["is_admin"] = not session.get("is_admin", False)
     return redirect(request.referrer or url_for("dashboard"))
 
 if __name__ == "__main__":

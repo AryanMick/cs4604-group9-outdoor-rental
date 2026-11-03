@@ -15,7 +15,32 @@ TABLE_PRIMARY_KEYS = {
     "admin": ("admin_id",),
     "defines_access": ("admin_id", "employee_id"),
     "admin_privileges": ("admin_id", "privilege"),
+    "cart": ("cart_id",),
+    "cart_item": ("cart_item_id",),
 }
+
+
+def _required_columns(cursor, table: str) -> set[str]:
+    """Columns that are NOT NULL with no default and no AUTO_INCREMENT."""
+    cursor.execute(
+        "SELECT COLUMN_NAME FROM information_schema.COLUMNS "
+        "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND IS_NULLABLE = 'NO' "
+        "AND COLUMN_DEFAULT IS NULL AND LOCATE('auto_increment', EXTRA) = 0",
+        (table,),
+    )
+    return {row[0] for row in cursor.fetchall()}
+
+
+def required_columns(table: str) -> set[str]:
+    """Return the columns an inserted row must supply for an allowlisted table."""
+    if table not in TABLE_PRIMARY_KEYS:
+        raise ValueError(f"Unknown table: {table!r}")
+    connection = db_tools.connect()
+    try:
+        with connection.cursor() as cursor:
+            return _required_columns(cursor, table)
+    finally:
+        connection.close()
 
 
 def insert_record(table: str, values: dict) -> int:
@@ -44,6 +69,10 @@ def insert_record(table: str, values: dict) -> int:
             unknown = [column for column in values if column not in valid_columns]
             if unknown:
                 raise ValueError(f"Unknown column(s) for {table}: {', '.join(map(str, unknown))}")
+
+            missing = sorted(_required_columns(cursor, table) - set(values))
+            if missing:
+                raise ValueError(f"Required field(s) missing for {table}: {', '.join(missing)}")
 
             columns = list(values)
             column_sql = ", ".join(f"`{column}`" for column in columns)

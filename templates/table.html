@@ -28,8 +28,9 @@
         <h3>Add a record to {{ table }}</h3>
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         {% for column in columns %}
-          <label>{{ column }}
-            <input type="text" name="{{ column }}" placeholder="leave blank for auto/NULL">
+          <label>{{ column }}{% if column in required_columns %} *{% endif %}
+            <input type="text" name="{{ column }}"
+                   {% if column in required_columns %}required placeholder="required"{% else %}placeholder="leave blank for auto/default/NULL"{% endif %}>
           </label>
         {% endfor %}
         <div class="dialog-actions">

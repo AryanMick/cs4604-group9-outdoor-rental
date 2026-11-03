@@ -1,0 +1,22 @@
+{% extends "customer/base.html" %}
+{% block title %}Choose a business{% endblock %}
+{% block content %}
+  <h1>Choose a business</h1>
+  <p class="muted">Select the business you want to rent equipment from.</p>
+
+  <label class="visually-hidden" for="business-search">Search businesses</label>
+  <input id="business-search" class="search-input" type="search" placeholder="Search businesses by name"
+         autocomplete="off" autofocus>
+
+  <ul id="business-list" class="business-list">
+    {% for business in businesses %}
+      <li data-name="{{ business.business_name|lower }}">
+        <a href="{{ url_for('customer.browse', business_id=business.business_id) }}">
+          <strong>{{ business.business_name }}</strong>
+          <span>{{ business.address }}</span>
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+  <p id="business-empty" class="muted" hidden>No businesses match your search.</p>
+{% endblock %}

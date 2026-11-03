@@ -1,0 +1,23 @@
+{% extends "customer/base.html" %}
+{% block title %}Reservation confirmed{% endblock %}
+{% block content %}
+  <div class="modal-backdrop">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+      <h1 id="confirm-title">Reservation confirmed</h1>
+      <p>Payment #{{ order.payment_id }} of {{ order.total|float|money }} was recorded for the card ending in {{ order.last4 }}.</p>
+      <ul class="confirm-list">
+        {% for item in order['items'] %}
+          <li><strong>{{ item.name }}</strong><br>{{ item.start }} to {{ item.end }}</li>
+        {% endfor %}
+      </ul>
+      <div class="form-actions">
+        <form action="{{ url_for('logout') }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="button button-danger" type="submit">Log out</button>
+        </form>
+        <a class="button button-primary"
+           href="{{ url_for('customer.browse', business_id=business_id) if business_id else url_for('customer.select_business') }}">Back to browsing</a>
+      </div>
+    </section>
+  </div>
+{% endblock %}
