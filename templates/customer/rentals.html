@@ -1,0 +1,46 @@
+{% extends "customer/base.html" %}
+{% block title %}My Rentals{% endblock %}
+{% block content %}
+  <h1>My Rentals</h1>
+  <p class="muted">Your saved reservations across all rental businesses.</p>
+  <p class="muted">Active Rentals are RESERVED items whose start time has arrived, including overdue items. Pickup is not tracked separately.</p>
+  <p class="muted">Item costs are estimates using current equipment rates; saved payment totals cover the whole order, even if its items appear in different sections.</p>
+  {% for key, title, empty in [
+    ('pending', 'Pending Pickup', 'You have no reservations awaiting pickup.'),
+    ('active', 'Active Rentals', 'You have no active rentals.'),
+    ('history', 'Rental History', 'You have no returned or cancelled rentals.')
+  ] %}
+    <section class="rental-section" aria-labelledby="{{ key }}-title">
+      <h2 id="{{ key }}-title">{{ title }}</h2>
+      {% for order in sections[key] %}
+        <article class="rental-order">
+          <h3>{{ 'Order / Payment #' ~ order.payment_id if order.payment_id is not none else 'Reservation #' ~ order.reservation_id }}</h3>
+          <p>Saved payment total: {{ order.payment_total|money if order.payment_total is not none else 'Not available (no recorded payment)' }}</p>
+          <div class="cart-list">
+            {% for item in order['items'] %}
+              <article class="cart-card">
+                <img src="{{ item.image_url|rental_image }}" alt="{{ item.equipment_type }}" loading="lazy">
+                <div class="cart-details">
+                  <h3>{{ item.equipment_type }}</h3>
+                  <p class="description">{{ item.description }}</p>
+                  <p>{{ item.business_name }}</p>
+                  <p>Start: {{ item.start_at|fmt_dt if item.start_at is not none else 'Not available' }}</p>
+                  <p>End: {{ item.end_at|fmt_dt if item.end_at is not none else 'Not available' }}</p>
+                  <p>Reservation #{{ item.reservation_id }} &middot; Status: <span class="badge badge-maintenance">{{ item.status }}</span></p>
+                  {% if item.overdue %}<p class="notice notice-error">Past due; still marked RESERVED, not returned.</p>{% endif %}
+                </div>
+                <div class="cart-side">
+                  <p class="price">{{ item.price|money if item.price is not none else 'Cost not available' }}</p>
+                  {% if item.price is not none %}<span class="muted">Estimated item cost</span>{% endif %}
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        </article>
+      {% else %}
+        <p class="muted">{{ empty }}</p>
+      {% endfor %}
+    </section>
+  {% endfor %}
+  <a class="button button-primary" href="{{ url_for('customer.select_business') }}">Browse equipment</a>
+{% endblock %}

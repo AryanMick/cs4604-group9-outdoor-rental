@@ -11,6 +11,7 @@
         {% endfor %}
       </ul>
       <div class="form-actions">
+        <a class="button button-secondary" href="{{ url_for('customer.rentals') }}">My Rentals</a>
         <form action="{{ url_for('logout') }}" method="post">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <button class="button button-danger" type="submit">Log out</button>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect width="400" height="300" fill="#e2e8e5"/>
+  <path d="M60 220 160 90 225 175 270 120 340 220Z" fill="#315b4f"/>
+  <circle cx="290" cy="70" r="22" fill="#d68b32"/>
+  <text x="200" y="265" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#173b31">Equipment image unavailable</text>
+</svg>

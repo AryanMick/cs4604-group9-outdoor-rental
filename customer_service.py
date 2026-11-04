@@ -172,6 +172,62 @@ def get_business(business_id: int) -> dict | None:
         connection.close()
 
 
+def get_customer_rentals(customer_id: int) -> dict[str, list[dict]]:
+    """Group this customer's reservations by time section and shared payment."""
+    connection = db_tools.connect()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT r.reservation_id, r.payment_id, r.status, r.checkout_date, r.due_date, "
+                "e.equipment_type, e.description, e.image_url, b.business_name, "
+                "e.rate, e.rate_unit, p.amount "
+                "FROM reservation r "
+                "LEFT JOIN rental_equipment e ON e.equipment_id = r.equipment_id "
+                "LEFT JOIN business b ON b.business_id = e.business_id "
+                "LEFT JOIN payment p ON p.payment_id = r.payment_id "
+                "WHERE r.customer_id=%s ORDER BY r.checkout_date DESC, r.reservation_id",
+                (customer_id,),
+            )
+            rows = cursor.fetchall()
+    finally:
+        connection.close()
+
+    now = current_time()
+    sections: dict[str, dict[tuple[str, int], dict]] = {
+        "pending": {}, "active": {}, "history": {},
+    }
+    for row in rows:
+        reservation_id, payment_id, status, start, end = row[:5]
+        if status in ("RETURNED", "CANCELLED"):
+            section = "history"
+        elif status == "RESERVED" and start is not None and start > now:
+            section = "pending"
+        elif status == "RESERVED":
+            # A passed due date does not prove that the equipment was returned.
+            section = "active"
+        else:
+            raise RuntimeError("A rental has an unsupported reservation status.")
+        key = ("payment", payment_id) if payment_id is not None else ("reservation", reservation_id)
+        orders = sections[section]
+        if key not in orders:
+            orders[key] = {
+                "payment_id": payment_id, "reservation_id": reservation_id,
+                "payment_total": row[11], "items": [],
+            }
+        price = None
+        if row[9] is not None and row[10] in ("DAY", "HOUR") and start is not None and end is not None and end > start:
+            price = calculate_price(row[9], row[10], start, end)
+        orders[key]["items"].append({
+            "reservation_id": reservation_id, "status": status, "start_at": start, "end_at": end,
+            "equipment_type": row[5] or "Equipment unavailable",
+            "description": row[6] or "No description available.",
+            "image_url": row[7], "business_name": row[8] or "Business unavailable",
+            "price": price,
+            "overdue": status == "RESERVED" and end is not None and end <= now,
+        })
+    return {name: list(orders.values()) for name, orders in sections.items()}
+
+
 def list_equipment(business_id: int, filter_start: datetime | None = None, filter_end: datetime | None = None) -> list[dict]:
     """List a business's non-retired equipment, optionally limited to a time range.
 

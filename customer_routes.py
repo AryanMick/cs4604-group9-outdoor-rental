@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 from functools import wraps
+from pathlib import Path
 import secrets
 
 from flask import (
-    Blueprint, abort, flash, jsonify, redirect, render_template, request, session, url_for,
+    Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, session, url_for,
 )
 import pymysql
 
@@ -29,13 +30,14 @@ def customer_view(view):
     """Require a customer session and turn database failures into an error page or JSON error."""
     @wraps(view)
     def wrapper(*args, **kwargs):
-        if session.get("role") != "customer":
+        if session.get("role") != "customer" or not isinstance(session.get("customer_id"), int):
             if _wants_json():
                 return jsonify(ok=False, error="Log in as a customer first."), 401
-            return redirect(url_for("dashboard"))
+            return redirect(url_for("customer.login_customer"))
         try:
             return view(*args, **kwargs)
         except (RuntimeError, pymysql.MySQLError) as exc:
+            current_app.logger.exception("Customer page database failure")
             if _wants_json():
                 return jsonify(ok=False, error=str(exc)), 503
             return render_template("customer/error.html", message=str(exc)), 503
@@ -52,6 +54,18 @@ def format_money(value) -> str:
     return f"${value:,.2f}"
 
 
+@bp.app_template_filter("rental_image")
+def rental_image(value) -> str:
+    """Use the configured project placeholder, or the bundled fallback if absent."""
+    root = Path(current_app.static_folder).resolve()
+    for candidate in (value, "img/placeholder.jpg", "img/placeholder.svg"):
+        if candidate:
+            path = (root / candidate).resolve()
+            if path.is_relative_to(root) and path.is_file():
+                return url_for("static", filename=candidate)
+    raise RuntimeError("The rental image placeholder is missing.")
+
+
 @bp.app_context_processor
 def inject_cart_count():
     if session.get("role") == "customer" and session.get("cart_id"):
@@ -62,19 +76,33 @@ def inject_cart_count():
     return {"cart_count": 0}
 
 
-@bp.route("/login/customer", methods=["POST"])
+@bp.route("/login/customer", methods=["GET", "POST"])
 def login_customer():
+    if request.method == "GET":
+        if session.get("role") == "customer" and isinstance(session.get("customer_id"), int):
+            return redirect(url_for("customer.select_business"))
+        return render_template("customer/login.html")
     if not _csrf_ok():
         abort(400)
     try:
         customer_id, cart_id = customer_service.start_customer_session()
     except (RuntimeError, pymysql.MySQLError) as exc:
+        current_app.logger.exception("Demo customer login failed")
         flash(str(exc), "error")
-        return redirect(url_for("dashboard"))
+        return redirect(url_for("customer.login_customer"))
     token = session.get("csrf_token")
     session.clear()
     session.update(csrf_token=token, role="customer", customer_id=customer_id, cart_id=cart_id)
     return redirect(url_for("customer.select_business"))
+
+
+@bp.route("/rentals")
+@customer_view
+def rentals():
+    return render_template(
+        "customer/rentals.html",
+        sections=customer_service.get_customer_rentals(session["customer_id"]),
+    )
 
 
 @bp.route("/shop")

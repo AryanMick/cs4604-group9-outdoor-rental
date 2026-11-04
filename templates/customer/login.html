@@ -1,0 +1,14 @@
+{% extends "customer/base.html" %}
+{% block title %}Customer demo login{% endblock %}
+{% block content %}
+  <section class="login-card">
+    <h1>Customer login</h1>
+    <p class="notice notice-error">Demo only: this is not real authentication. No password or personal information is required.</p>
+    <p>Continue as Demo Customer (sample customer ID 31) to browse equipment, check out, and view My Rentals.</p>
+    <p class="muted">This demo account is shared. Its cart resets at login and logout; reservations remain saved.</p>
+    <form action="{{ url_for('customer.login_customer') }}" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="button button-primary" type="submit">Continue as Demo Customer</button>
+    </form>
+  </section>
+{% endblock %}

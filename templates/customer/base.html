@@ -12,12 +12,17 @@
   <header class="site-header">
     <a class="brand" href="{{ url_for('customer.select_business') }}">Outdoor Equipment Rentals</a>
     <nav class="header-nav">
+      {% if session.get('role') == 'customer' %}
       <a href="{{ url_for('customer.select_business') }}">Change business</a>
+      <a href="{{ url_for('customer.rentals') }}"{% if request.endpoint == 'customer.rentals' %} aria-current="page"{% endif %}>My Rentals</a>
       <a class="cart-link" href="{{ url_for('customer.cart') }}">Cart (<span id="cart-count">{{ cart_count }}</span>)</a>
       <form action="{{ url_for('logout') }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <button class="button button-danger" type="submit">Log out</button>
       </form>
+      {% else %}
+      <a href="{{ url_for('dashboard') }}">Dashboard</a>
+      {% endif %}
     </nav>
   </header>
 

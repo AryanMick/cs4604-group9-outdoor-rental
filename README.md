@@ -29,7 +29,9 @@ Stop with **Ctrl+C** and run the same command next time
 - **Make Admin** lets you change data: click **Add record**, fill in the fields (starred fields are required), then **Insert record**
 - Use `YYYY-MM-DD HH:MM:SS` for date and time fields and existing IDs for related records
 - Click **Delete** beside a row and confirm — MySQL blocks deletion when another record depends on it
-- **Log in as Customer** opens the customer view: choose a business, browse its equipment, add items to the cart for a chosen time, then pay (a demonstration payment; only the last 4 card digits are saved)
+- **Log in as Customer** opens a demo login screen. **Continue as Demo Customer** uses the sample account with ID 31 (looked up by its demo email), not real authentication. Choose a business, browse equipment, add items to the cart for a chosen time, then pay (a demonstration payment; only the last 4 card digits are saved)
+- **My Rentals** shows only the session customer's saved reservations, grouped by payment/order. Future `RESERVED` items appear in **Pending Pickup**; started `RESERVED` items, including overdue ones, appear in **Active Rentals**. **Rental History** contains `RETURNED` and `CANCELLED` items. Pickup is not tracked separately.
+- The saved payment total is for the whole order. Per-item costs are estimates calculated using current rates because the schema does not store the original item price.
 - The customer's cart is deleted when they log out
 - Open MySQL Workbench with the same login to run SQL, such as `SELECT * FROM customer;`
 
@@ -45,6 +47,17 @@ python start.py
 Use your own database name if you changed it in `db_config.json`. The MySQL account needs permission to create triggers and routines.
 
 Rental photos live in `static/img/`; `placeholder.jpg` is the default for equipment without its own `image_url`.
+My Rentals checks whether each local image exists, then uses `placeholder.jpg` if present or the bundled `placeholder.svg` fallback. No schema changes or database reset are required for My Rentals or demo login.
+
+### Test customer rentals
+
+1. Run `python start.py`, open the dashboard, click **Log in as Customer**, then **Continue as Demo Customer**.
+2. Open **My Rentals**. Customer 31 initially has no sample reservations, so all three sections should show empty messages.
+3. Add two available items with future, non-overlapping booking times (day-rate items need whole 24-hour days) and complete the simulated checkout.
+4. Click **My Rentals** on the confirmation screen. Both items should appear under one payment in **Pending Pickup**, with business, dates, status, cost, and image fallback.
+5. Log out and back in: reservations persist although the cart is reset.
+6. To exercise Active Rentals and History, use existing staff/admin controls or Workbench on your local test database. A `RESERVED` row whose start has passed is active; a passed due date shows an overdue warning. Set a demo reservation to `RETURNED` or `CANCELLED` to move it to history. Do not create a new status.
+7. Other customers' reservations must not appear. Automated tests also cover session scoping, mixed-status multi-item orders, missing data, image fallback, and database errors: `python -m unittest discover tests`.
 
 ## If it fails
 
