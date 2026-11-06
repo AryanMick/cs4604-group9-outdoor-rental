@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Login | Outdoor Rental Database{% endblock %}
+{% block content %}
+  <section class="auth-shell">
+    <div class="auth-card">
+      <h2>Sign in</h2>
+      <p class="auth-intro">Login with either a customer, staff, or admin account.</p>
+
+      {% for category, message in messages %}
+        <div class="auth-message {{ category }}" role="alert">{{ message }}</div>
+      {% endfor %}
+
+      <form class="auth-form" action="{{ url_for('login') }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label for="email">Email address</label>
+        <input id="email" name="email" type="email" autocomplete="email" required autofocus>
+
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+
+        <button class="auth-submit" type="submit">Sign in</button>
+      </form>
+
+      <p class="auth-footer"><a href="{{ url_for('dashboard') }}">Return to dashboard</a></p>
+    </div>
+  </section>
+{% endblock %}

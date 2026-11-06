@@ -189,3 +189,46 @@ tbody tr:nth-child(even) { background: #eef4f1; }
 .insert-dialog label { display: flex; flex-direction: column; font-size: .85rem; }
 .dialog-actions { display: flex; gap: .5rem; justify-content: flex-end; }
 .delete-button { padding: 5px 9px; background: #a83232; color: white; }
+
+.auth-shell {
+  min-height: 62vh;
+  display: grid;
+  place-items: center;
+  padding: 28px 0;
+}
+.auth-card {
+  width: min(440px, 100%);
+  padding: 30px;
+  border: 1px solid #cbd6d0;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 12px 30px rgba(23, 59, 49, .08);
+}
+.auth-kicker {
+  margin: 0 0 8px;
+  color: #aa6015;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.auth-card h2 { margin-bottom: 8px; font-size: 28px; }
+.auth-intro { margin: 0 0 22px; color: #5a6862; line-height: 1.5; }
+.auth-form { display: grid; gap: 8px; }
+.auth-form label { color: #24483e; font-size: 14px; font-weight: bold; }
+.auth-form input {
+  width: 100%;
+  margin-bottom: 9px;
+  padding: 11px 12px;
+  border: 1px solid #9da9a3;
+  border-radius: 4px;
+  color: #17202a;
+  font: inherit;
+}
+.auth-form input:focus { outline: 2px solid #4b93c4; outline-offset: 1px; }
+.auth-submit { margin-top: 6px; background: #173b31; color: white; }
+.auth-message { margin: 0 0 16px; padding: 10px 12px; border-radius: 4px; font-size: 14px; }
+.auth-message.error { background: #fce8e6; border: 1px solid #cf8078; color: #8d241b; }
+.auth-message.success { background: #e6f4ea; border: 1px solid #7eb28c; color: #185b2d; }
+.auth-footer { margin: 20px 0 0; font-size: 14px; text-align: center; }
+.auth-footer a { color: #23684f; font-weight: bold; }

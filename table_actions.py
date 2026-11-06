@@ -17,6 +17,7 @@ TABLE_PRIMARY_KEYS = {
     "admin_privileges": ("admin_id", "privilege"),
     "cart": ("cart_id",),
     "cart_item": ("cart_item_id",),
+    "auth_account": ("account_id",),
 }
 
 

@@ -32,11 +32,8 @@ CREATE TABLE customer (
     customer_id INT AUTO_INCREMENT PRIMARY KEY,
     first_name VARCHAR(80) NOT NULL,
     last_name VARCHAR(80) NOT NULL,
-    email VARCHAR(254) NOT NULL,
     CONSTRAINT customer_first_name_not_blank CHECK (TRIM(first_name) <> ''),
-    CONSTRAINT customer_last_name_not_blank CHECK (TRIM(last_name) <> ''),
-    CONSTRAINT customer_email_not_blank CHECK (TRIM(email) <> ''),
-    CONSTRAINT customer_email_unique UNIQUE (email)
+    CONSTRAINT customer_last_name_not_blank CHECK (TRIM(last_name) <> '')
 ) ENGINE=InnoDB;
 
 -- One payment can cover several reservations; only the last 4 card digits are kept.
@@ -72,12 +69,9 @@ CREATE TABLE manager (
     manager_id INT AUTO_INCREMENT PRIMARY KEY,
     first_name VARCHAR(80) NOT NULL,
     last_name VARCHAR(80) NOT NULL,
-    email VARCHAR(254) NOT NULL,
     business_id INT NOT NULL,
     CONSTRAINT manager_first_name_not_blank CHECK (TRIM(first_name) <> ''),
     CONSTRAINT manager_last_name_not_blank CHECK (TRIM(last_name) <> ''),
-    CONSTRAINT manager_email_not_blank CHECK (TRIM(email) <> ''),
-    CONSTRAINT manager_email_unique UNIQUE (email),
     CONSTRAINT manager_business_fk FOREIGN KEY (business_id) REFERENCES business (business_id)
 ) ENGINE=InnoDB;
 
@@ -85,12 +79,9 @@ CREATE TABLE employee (
     employee_id INT AUTO_INCREMENT PRIMARY KEY,
     first_name VARCHAR(80) NOT NULL,
     last_name VARCHAR(80) NOT NULL,
-    email VARCHAR(254) NOT NULL,
     manager_id INT NOT NULL,
     CONSTRAINT employee_first_name_not_blank CHECK (TRIM(first_name) <> ''),
     CONSTRAINT employee_last_name_not_blank CHECK (TRIM(last_name) <> ''),
-    CONSTRAINT employee_email_not_blank CHECK (TRIM(email) <> ''),
-    CONSTRAINT employee_email_unique UNIQUE (email),
     CONSTRAINT employee_manager_fk FOREIGN KEY (manager_id) REFERENCES manager (manager_id)
 ) ENGINE=InnoDB;
 
@@ -117,6 +108,29 @@ CREATE TABLE admin_privileges (
     PRIMARY KEY (admin_id, privilege),
     CONSTRAINT privilege_not_blank CHECK (TRIM(privilege) <> ''),
     CONSTRAINT privileges_admin_fk FOREIGN KEY (admin_id) REFERENCES admin (admin_id)
+) ENGINE=InnoDB;
+
+CREATE TABLE auth_account (
+    account_id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(254) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(20) NOT NULL,
+    customer_id INT NULL UNIQUE,
+    employee_id INT NULL UNIQUE,
+    manager_id INT NULL UNIQUE,
+    admin_id INT NULL UNIQUE,
+    CONSTRAINT auth_email_not_blank CHECK (TRIM(email) <> ''),
+    CONSTRAINT auth_email_unique UNIQUE (email),
+    CONSTRAINT auth_role_valid CHECK (role IN ('CUSTOMER', 'STAFF', 'ADMIN')),
+    CONSTRAINT auth_customer_fk FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
+    CONSTRAINT auth_employee_fk FOREIGN KEY (employee_id) REFERENCES employee (employee_id),
+    CONSTRAINT auth_manager_fk FOREIGN KEY (manager_id) REFERENCES manager (manager_id),
+    CONSTRAINT auth_admin_fk FOREIGN KEY (admin_id) REFERENCES admin (admin_id),
+    CONSTRAINT auth_role_link_valid CHECK (
+        (role = 'CUSTOMER' AND customer_id IS NOT NULL AND employee_id IS NULL AND manager_id IS NULL AND admin_id IS NULL)
+        OR (role = 'STAFF' AND customer_id IS NULL AND (employee_id IS NOT NULL OR manager_id IS NOT NULL) AND admin_id IS NULL)
+        OR (role = 'ADMIN' AND customer_id IS NULL AND employee_id IS NULL AND manager_id IS NULL AND admin_id IS NOT NULL)
+    )
 ) ENGINE=InnoDB;
 
 -- A customer's cart exists only while logged in: created at login, deleted at logout.
@@ -166,9 +180,10 @@ JOIN business AS b ON b.business_id = e.business_id
 LEFT JOIN payment AS p ON p.payment_id = r.payment_id;
 
 CREATE VIEW employee_details AS
-SELECT e.employee_id, e.first_name, e.last_name, e.email,
+SELECT e.employee_id, e.first_name, e.last_name, a.email,
        m.manager_id, CONCAT(m.first_name, ' ', m.last_name) AS manager,
        b.business_id, b.business_name
 FROM employee AS e
+LEFT JOIN auth_account AS a ON a.employee_id = e.employee_id
 JOIN manager AS m ON m.manager_id = e.manager_id
 JOIN business AS b ON b.business_id = m.business_id;

@@ -24,6 +24,7 @@ TABLES = (
     "cart",
     "cart_item",
 )
+SCHEMA_TABLES = (*TABLES, "auth_account")
 EXPECTED_COUNTS = {
     "business": 20,
     "rental_equipment": 40,
@@ -37,6 +38,7 @@ EXPECTED_COUNTS = {
     "admin_privileges": 40,
     "cart": 0,
     "cart_item": 0,
+    "auth_account": 91,
 }
 
 
@@ -205,7 +207,7 @@ def status_report() -> dict:
             cursor.execute("SELECT VERSION(), DATABASE(), CURRENT_USER(), CONNECTION_ID()")
             version, database, user, connection_id = cursor.fetchone()
             counts = {}
-            for table in TABLES:
+            for table in SCHEMA_TABLES:
                 cursor.execute(f"SELECT COUNT(*) FROM `{table}`")
                 counts[table] = cursor.fetchone()[0]
     finally:

@@ -23,11 +23,11 @@ def verify() -> dict:
             version, database = cursor.fetchone()
 
             counts = {}
-            for table in db_tools.TABLES:
+            for table in db_tools.SCHEMA_TABLES:
                 counts[table] = scalar(cursor, f"SELECT COUNT(*) FROM `{table}`")
             assert counts == db_tools.EXPECTED_COUNTS
-            assert sum(counts.values()) == 301
-            checks.append("All 12 base tables have their expected counts (301 total rows)")
+            assert sum(counts.values()) == 392
+            checks.append("All 13 base tables have their expected counts (392 total rows)")
 
             primary_keys = scalar(
                 cursor,
@@ -35,7 +35,7 @@ def verify() -> dict:
                    WHERE constraint_schema=%s AND constraint_type='PRIMARY KEY'""",
                 (database,),
             )
-            assert primary_keys == 12
+            assert primary_keys == 13
             checks.append("Every base table has a primary key")
 
             foreign_keys = scalar(
@@ -44,8 +44,8 @@ def verify() -> dict:
                    WHERE constraint_schema=%s AND constraint_type='FOREIGN KEY'""",
                 (database,),
             )
-            assert foreign_keys == 12
-            checks.append("All 12 intended foreign keys exist")
+            assert foreign_keys == 16
+            checks.append("All 16 intended foreign keys exist")
 
             unique_constraints = scalar(
                 cursor,
@@ -53,8 +53,8 @@ def verify() -> dict:
                    WHERE constraint_schema=%s AND constraint_type='UNIQUE'""",
                 (database,),
             )
-            assert unique_constraints == 5
-            checks.append("All 5 intended unique constraints exist")
+            assert unique_constraints == 9
+            checks.append("All 9 intended unique constraints exist")
 
             check_constraints = scalar(
                 cursor,
@@ -63,8 +63,8 @@ def verify() -> dict:
                      AND enforced='YES'""",
                 (database,),
             )
-            assert check_constraints == 26
-            checks.append("All 26 CHECK constraints exist and are enforced")
+            assert check_constraints == 28
+            checks.append("All 28 CHECK constraints exist and are enforced")
 
             triggers = scalar(
                 cursor,
@@ -87,9 +87,12 @@ def verify() -> dict:
                 "SELECT COUNT(*) FROM defines_access c LEFT JOIN admin p ON p.admin_id=c.admin_id WHERE p.admin_id IS NULL",
                 "SELECT COUNT(*) FROM defines_access c LEFT JOIN employee p ON p.employee_id=c.employee_id WHERE p.employee_id IS NULL",
                 "SELECT COUNT(*) FROM admin_privileges c LEFT JOIN admin p ON p.admin_id=c.admin_id WHERE p.admin_id IS NULL",
+                "SELECT COUNT(*) FROM auth_account c LEFT JOIN customer p ON p.customer_id=c.customer_id WHERE c.customer_id IS NOT NULL AND p.customer_id IS NULL",
+                "SELECT COUNT(*) FROM auth_account c LEFT JOIN employee p ON p.employee_id=c.employee_id WHERE c.employee_id IS NOT NULL AND p.employee_id IS NULL",
+                "SELECT COUNT(*) FROM auth_account c LEFT JOIN admin p ON p.admin_id=c.admin_id WHERE c.admin_id IS NOT NULL AND p.admin_id IS NULL",
             )
             assert all(scalar(cursor, query) == 0 for query in orphan_queries)
-            checks.append("All 12 foreign-key relationships are free of orphan rows")
+            checks.append("All 15 foreign-key relationships are free of orphan rows")
 
             unpaid = scalar(
                 cursor,
@@ -128,12 +131,21 @@ def verify() -> dict:
             sample_emails = scalar(
                 cursor,
                 """SELECT
-                     (SELECT COUNT(*) FROM customer WHERE BINARY email <> BINARY CONCAT(first_name,last_name,'@gmail.com')) +
-                     (SELECT COUNT(*) FROM manager WHERE BINARY email <> BINARY CONCAT(first_name,last_name,'@gmail.com')) +
-                     (SELECT COUNT(*) FROM employee WHERE BINARY email <> BINARY CONCAT(first_name,last_name,'@gmail.com'))""",
+                     (SELECT COUNT(*) FROM auth_account a JOIN customer c ON c.customer_id = a.customer_id
+                      WHERE a.role = 'CUSTOMER'
+                        AND BINARY a.email <> BINARY CONCAT(c.first_name,c.last_name,'@gmail.com')) +
+                     (SELECT COUNT(*) FROM auth_account a JOIN manager m ON m.manager_id = a.manager_id
+                      WHERE a.role = 'STAFF'
+                        AND BINARY a.email <> BINARY CONCAT(m.first_name,m.last_name,'@gmail.com')) +
+                     (SELECT COUNT(*) FROM auth_account a JOIN employee e ON e.employee_id = a.employee_id
+                      WHERE a.role = 'STAFF'
+                        AND BINARY a.email <> BINARY CONCAT(e.first_name,e.last_name,'@gmail.com')) +
+                     (SELECT COUNT(*) FROM auth_account a JOIN admin d ON d.admin_id = a.admin_id
+                      WHERE a.role = 'ADMIN'
+                        AND BINARY a.email <> BINARY CONCAT(d.first_name,d.last_name,'@gmail.com'))""",
             )
             assert sample_emails == 0
-            checks.append("Every sample email uses the person’s name and gmail.com")
+            checks.append("Every sample account email uses the person’s name and gmail.com")
         connection.rollback()
 
         equipment_columns = "equipment_id,equipment_type,description,rate,rate_unit,status,business_id"
@@ -175,10 +187,10 @@ def verify() -> dict:
              ("INSERT INTO cart (cart_id,customer_id) VALUES (9001,31)",
               "INSERT INTO cart_item (cart_id,equipment_id,start_at,end_at) VALUES (9001,1,'2027-01-04 09:00:00','2027-01-05 09:00:00')",
               "INSERT INTO cart_item (cart_id,equipment_id,start_at,end_at) VALUES (9001,1,'2027-02-04 09:00:00','2027-02-05 09:00:00')")),
-            ("Duplicate customer email rejected", 1062,
-             "INSERT INTO customer (customer_id,first_name,last_name,email) VALUES (9001,'Test','Person','AlexCarter@gmail.com')"),
+            ("Duplicate account email rejected", 1062,
+             "INSERT INTO auth_account (account_id,email,password_hash,role,customer_id) VALUES (9001,'AlexCarter@gmail.com','test','CUSTOMER',1)"),
             ("Missing required manager rejected", 1048,
-             "INSERT INTO employee (employee_id,first_name,last_name,email,manager_id) VALUES (9001,'Test','Person','TestPerson@gmail.com',NULL)"),
+             "INSERT INTO employee (employee_id,first_name,last_name,manager_id) VALUES (9001,'Test','Person',NULL)"),
             ("Invalid equipment status rejected", 3819,
              f"INSERT INTO rental_equipment ({equipment_columns}) VALUES (9001,'Test tent','A tent',10.00,'DAY','UNKNOWN',1)"),
             ("Invalid reservation status rejected", 3819,

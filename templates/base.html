@@ -14,46 +14,34 @@
     </div>
     <div>
     {% if logged_in %}
-      {% if is_admin %}
-        <form action="{{ url_for('toggle_admin') }}" method="post" style="display: inline;">
-          <button class="remove-admin-link" type="submit">Remove Admin</button>
-        </form>
-      {% else %}
-        <form action="{{ url_for('toggle_admin') }}" method="post" style="display: inline;">
-          <button class="make-admin-link" type="submit">Make Admin</button>
-        </form>
-      {% endif %}
       <form action="{{ url_for('logout') }}" method="post" style="display: inline;">
         <button class="logout-link" type="submit">Logout</button>
       </form>
     {% else %}
-      <form action="{{ url_for('login') }}" method="post" style="display: inline;">
-        <button class="login-link" type="submit">Login</button>
-      </form>
-      <form action="{{ url_for('register') }}" method="post" style="display: inline;">
-        <button class="login-link" type="submit">Register</button>
-      </form>
-      <a class="login-link" href="{{ url_for('customer.login_customer') }}">Log in as Customer</a>
+      <a class="login-link" href="{{ url_for('login') }}">Login</a>
+      <a class="login-link" href="{{ url_for('login') }}">Register</a> <!-- TODO: Implement registration -->
     {% endif %}
     <a class="home-link" href="{{ url_for('dashboard') }}">Dashboard</a>
     </div>
   </header>
 
   <main>
-    {% if error %}
+    {% if connection is defined %}
+      {% if error %}
       <section class="status error">
         <strong>Database connection failed</strong>
         <span>{{ error }}</span>
         <span>No successful database query is currently verified.</span>
       </section>
-    {% else %}
+      {% else %}
       <section class="status success">
         <strong>Connection and queries successful</strong>
         <span>MySQL {{ connection.version }} · Database: {{ connection.database }} · User: {{ connection.user }}</span>
         <span>Connection ID: {{ connection.connection_id }} · Checked: {{ connection.checked }}</span>
       </section>
+      {% endif %}
     {% endif %}
-    {% if logged_in %}
+    {% if logged_in and is_elevated %}
       <form class="table-picker" action="{{ url_for('choose_table') }}" method="get">
         <label for="table">Select a table or view</label>
         <select id="table" name="table" onchange="this.form.submit()">

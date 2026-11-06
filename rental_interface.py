@@ -6,6 +6,7 @@ import math
 import secrets
 
 from flask import Flask, abort, flash, get_flashed_messages, redirect, render_template, request, session, url_for
+from werkzeug.security import check_password_hash, generate_password_hash
 import pymysql
 
 import db_tools
@@ -22,6 +23,11 @@ VIEWS = ("reservation_details", "employee_details")
 CHOICES = (*db_tools.TABLES, *VIEWS)
 ROWS_PER_PAGE = 20
 
+def is_logged_in() -> bool:
+    return session.get("role") in {"customer", "staff", "admin"}
+
+def is_customer() -> bool:
+    return session.get("role") == "customer"
 
 def is_staff() -> bool:
     """True for the temporary Login/Register session that can open the dashboard."""
@@ -29,14 +35,32 @@ def is_staff() -> bool:
 
 
 def is_admin() -> bool:
-    return is_staff() and session.get("is_admin", False)
+    """True for the admin role."""
+    return session.get("role") == "admin"
 
+def is_elevated() -> bool:
+    """True for staff and admin roles."""
+    return session.get("role") in {"staff", "admin"}
 
 def deny_unless_staff() -> None:
     """Abort with 403 for customers and 401 for visitors who are not logged in."""
     if not is_staff():
-        abort(403 if session.get("role") == "customer" else 401)
+        abort(403 if is_logged_in() else 401)
 
+def deny_unless_admin() -> None:
+    """Abort with 403 for customers and 401 for visitors who are not logged in."""
+    if not is_admin():
+        abort(403 if is_logged_in() else 401)
+
+def deny_unless_elevated() -> None:
+    """Abort with 403 for customers and 401 for visitors who are not logged in."""
+    if not is_elevated():
+        abort(403 if is_logged_in() else 401)
+
+def deny_unless_logged_in() -> None:
+    """Abort with 401 for visitors who are not logged in."""
+    if not is_logged_in():
+        abort(401)
 
 def read_database(table: str | None = None, page: int = 1) -> dict:
     """Run the live connection check, counts, and optional table query."""
@@ -90,7 +114,7 @@ def read_database(table: str | None = None, page: int = 1) -> dict:
 
 @app.route("/")
 def dashboard():
-    if session.get("role") == "customer":
+    if is_customer():
         return redirect(url_for("customer.select_business"))
     try:
         data = read_database()
@@ -99,7 +123,7 @@ def dashboard():
         return (
             render_template(
                 "index.html",
-                choices=CHOICES,
+                choices=None,
                 connection=None,
                 counts={},
                 total_rows=0,
@@ -111,7 +135,7 @@ def dashboard():
 
 @app.route("/go")
 def choose_table():
-    deny_unless_staff()
+    deny_unless_elevated()
     table = request.args.get("table", "")
     if not table:
         return redirect(request.referrer or url_for("dashboard"))
@@ -122,7 +146,7 @@ def choose_table():
 
 @app.route("/table/<table>")
 def show_table(table: str):
-    deny_unless_staff()
+    deny_unless_elevated()
     if table not in CHOICES:
         abort(404)
     try:
@@ -162,16 +186,15 @@ def inject_form_helpers():
         "insertable": set(table_actions.TABLE_PRIMARY_KEYS),
         "primary_keys": table_actions.TABLE_PRIMARY_KEYS,
         "base_tables": db_tools.TABLES,
-        "logged_in": is_staff(),
+        "logged_in": is_logged_in(),
+        "is_elevated": is_elevated(),
         "is_admin": is_admin(),
     }
 
 
 @app.route("/table/<table>/insert", methods=["POST"])
 def insert_row(table: str):
-    deny_unless_staff()
-    if not is_admin():
-        abort(403)
+    deny_unless_admin()
     if table not in table_actions.TABLE_PRIMARY_KEYS:
         abort(404)
     token = session.get("csrf_token")
@@ -193,9 +216,7 @@ def insert_row(table: str):
 
 @app.route("/table/<table>/delete", methods=["POST"])
 def delete_row(table: str):
-    deny_unless_staff()
-    if not is_admin():
-        abort(403)
+    deny_unless_admin()
     if table not in table_actions.TABLE_PRIMARY_KEYS:
         abort(404)
     token = session.get("csrf_token")
@@ -213,33 +234,63 @@ def delete_row(table: str):
         flash(str(exc), "error")
     return redirect(url_for("show_table", table=table))
 
-@app.route("/login", methods=["POST"])
+@app.route("/login", methods=["GET", "POST"])
 def login():
-    session["role"] = "staff"
-    session["is_admin"] = False
-    return redirect(request.referrer or url_for("dashboard"))
+    if request.method == "GET":
+        return render_template("auth/login.html")
+
+    token = session.get("csrf_token")
+    if not token or not secrets.compare_digest(token, request.form.get("csrf_token", "")):
+        abort(400)
+    email = request.form.get("email", "").strip().lower()
+    password = request.form.get("password", "")
+
+    connection = db_tools.connect()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT account_id, password_hash, role, customer_id
+                FROM auth_account
+                WHERE email = %s
+                """,
+                (email,),
+            )
+            account = cursor.fetchone()
+    finally:
+        connection.close()
+
+    if account is None or not check_password_hash(account[1], password):
+        flash("Invalid email or password.", "error")
+        return render_template("auth/login.html"), 401
+
+    session.clear()
+    session["account_id"] = account[0]
+    session["role"] = account[2].lower()
+
+    if account[2] == "CUSTOMER":
+        session["customer_id"] = account[3]
+        # TODO: Create a customer session
+        # Create a cart here, without using the shared demo customer.
+
+    return redirect(url_for("dashboard"))
 
 @app.route("/register", methods=["POST"])
 def register():
+    # TODO: implement registration
     session["role"] = "staff"
     session["is_admin"] = False
     return redirect(request.referrer or url_for("dashboard"))
 
 @app.route("/logout", methods=["POST"])
 def logout():
-    if session.get("role") == "customer":
+    if is_customer():
         try:
             customer_service.end_customer_session(session["customer_id"])
         except (RuntimeError, pymysql.MySQLError):
             pass  # The next customer login resets the cart anyway.
     session.clear()
     return redirect(url_for("dashboard"))
-
-@app.route("/toggle_admin", methods=["POST"])
-def toggle_admin():
-    deny_unless_staff()
-    session["is_admin"] = not session.get("is_admin", False)
-    return redirect(request.referrer or url_for("dashboard"))
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5001, debug=False)

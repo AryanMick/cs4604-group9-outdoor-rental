@@ -110,13 +110,17 @@ def _check_item(cursor, equipment_id: int, start: datetime, end: datetime, now: 
 
 def start_customer_session() -> tuple[int, int]:
     """Create a fresh cart for the demo customer and return (customer_id, cart_id)."""
+    # TODO: Replace the demo customer lookup with the actual customer ID from the session.
     connection = db_tools.connect()
     try:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT customer_id FROM customer WHERE email=%s", (DEMO_CUSTOMER_EMAIL,))
+            cursor.execute(
+                "SELECT customer_id FROM auth_account WHERE email=%s AND role='CUSTOMER'",
+                (DEMO_CUSTOMER_EMAIL.lower(),),
+            )
             row = cursor.fetchone()
             if row is None:
-                raise RuntimeError(f"The demo customer ({DEMO_CUSTOMER_EMAIL}) is missing from the customer table.")
+                raise RuntimeError(f"The demo customer account ({DEMO_CUSTOMER_EMAIL}) is missing.")
             customer_id = row[0]
             _delete_cart(cursor, customer_id)
             cursor.execute("INSERT INTO cart (customer_id) VALUES (%s)", (customer_id,))
