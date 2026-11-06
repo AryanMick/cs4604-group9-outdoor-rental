@@ -6,7 +6,7 @@ import math
 import secrets
 
 from flask import Flask, abort, flash, get_flashed_messages, redirect, render_template, request, session, url_for
-from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.security import check_password_hash
 import pymysql
 
 import db_tools
@@ -30,7 +30,7 @@ def is_customer() -> bool:
     return session.get("role") == "customer"
 
 def is_staff() -> bool:
-    """True for the temporary Login/Register session that can open the dashboard."""
+    """True for a signed-in staff account."""
     return session.get("role") == "staff"
 
 
@@ -245,46 +245,60 @@ def login():
     email = request.form.get("email", "").strip().lower()
     password = request.form.get("password", "")
 
-    connection = db_tools.connect()
     try:
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT account_id, password_hash, role, customer_id
-                FROM auth_account
-                WHERE email = %s
-                """,
-                (email,),
-            )
-            account = cursor.fetchone()
-    finally:
-        connection.close()
+        connection = db_tools.connect()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT account_id, password_hash, role, customer_id
+                    FROM auth_account
+                    WHERE email = %s
+                    """,
+                    (email,),
+                )
+                account = cursor.fetchone()
+        finally:
+            connection.close()
+    except (RuntimeError, pymysql.MySQLError):
+        app.logger.exception("Login database failure")
+        flash("Unable to sign in. Check the database connection and try again.", "error")
+        return render_template("auth/login.html"), 503
 
     if account is None or not check_password_hash(account[1], password):
         flash("Invalid email or password.", "error")
         return render_template("auth/login.html"), 401
 
+    role = account[2].lower()
+    if role == "customer":
+        try:
+            cart_id = customer_service.start_customer_session(account[3])
+        except (RuntimeError, pymysql.MySQLError):
+            app.logger.exception("Customer cart setup failed")
+            flash("Unable to open your cart. Please try signing in again.", "error")
+            return render_template("auth/login.html"), 503
+
+    # Only save the login once both the password and customer cart are ready.
     session.clear()
     session["account_id"] = account[0]
-    session["role"] = account[2].lower()
-
-    if account[2] == "CUSTOMER":
+    session["role"] = role
+    if role == "customer":
         session["customer_id"] = account[3]
-        # TODO: Create a customer session
-        # Create a cart here, without using the shared demo customer.
+        session["cart_id"] = cart_id
 
     return redirect(url_for("dashboard"))
 
 @app.route("/register", methods=["POST"])
 def register():
-    # TODO: implement registration
-    session["role"] = "staff"
-    session["is_admin"] = False
-    return redirect(request.referrer or url_for("dashboard"))
+    # Registration is not implemented; it must not grant a staff session.
+    abort(501, description="Registration is not available yet.")
 
 @app.route("/logout", methods=["POST"])
 def logout():
-    if is_customer():
+    token = session.get("csrf_token")
+    if not token or not secrets.compare_digest(token, request.form.get("csrf_token", "")):
+        abort(400)
+    if is_customer() and isinstance(session.get("customer_id"), int):
         try:
             customer_service.end_customer_session(session["customer_id"])
         except (RuntimeError, pymysql.MySQLError):

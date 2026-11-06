@@ -25,34 +25,33 @@ Stop with **Ctrl+C** and run the same command next time
 
 ## Use it
 
-- **Login** or **Register** opens the dashboard; select a table to see its data
-- **Make Admin** lets you change data: click **Add record**, fill in the fields (starred fields are required), then **Insert record**
+- **Login** uses the email and password in `auth_account`; registration is not available yet
+- Sample customer login: `alexcarter@gmail.com` with password `password`
+- Customers choose a business, add equipment to their own cart, and complete the practice checkout
+- Staff can view tables; admins can also add and delete records
+- To add a row as an admin, click **Add record**, fill in the required fields, then **Insert record**
 - Use `YYYY-MM-DD HH:MM:SS` for date and time fields and existing IDs for related records
 - Click **Delete** beside a row and confirm — MySQL blocks deletion when another record depends on it
-- **Log in as Customer** opens a demo login screen. **Continue as Demo Customer** uses the sample account with ID 31 (looked up by its demo email), not real authentication. Choose a business, browse equipment, add items to the cart for a chosen time, then pay (a demonstration payment; only the last 4 card digits are saved)
+- Checkout is a demonstration payment; only the last 4 card digits are saved
 - **My Rentals** shows only the session customer's saved reservations, grouped by payment/order. Future `RESERVED` items appear in **Pending Pickup**; started `RESERVED` items, including overdue ones, appear in **Active Rentals**. **Rental History** contains `RETURNED` and `CANCELLED` items. Pickup is not tracked separately.
 - The saved payment total is for the whole order. Per-item costs are estimates calculated using current rates because the schema does not store the original item price.
 - The customer's cart is deleted when they log out
 - Open MySQL Workbench with the same login to run SQL, such as `SELECT * FROM customer;`
 
-## Reset the database
+## Older database copies
 
-The setup only fills an empty database. After the SQL files change, drop the database and start again:
-
-```sh
-mysql -u <your user> -p -e "DROP DATABASE outdoor_rental_group9;"
-python start.py
-```
-
-Use your own database name if you changed it in `db_config.json`. The MySQL account needs permission to create triggers and routines.
+The new login needs the `auth_account` table
+If your database was created before that change, set a new database name in `db_config.json` and run `python start.py`
+Setup fills the new database and keeps the old one
+The MySQL account needs permission to create the database, triggers, and routines
 
 Rental photos live in `static/img/`; `placeholder.jpg` is the default for equipment without its own `image_url`.
-My Rentals checks whether each local image exists, then uses `placeholder.jpg` if present or the bundled `placeholder.svg` fallback. No schema changes or database reset are required for My Rentals or demo login.
+My Rentals checks whether each local image exists, then uses `placeholder.jpg` if present or the bundled `placeholder.svg` fallback.
 
 ### Test customer rentals
 
-1. Run `python start.py`, open the dashboard, click **Log in as Customer**, then **Continue as Demo Customer**.
-2. Open **My Rentals**. Customer 31 initially has no sample reservations, so all three sections should show empty messages.
+1. Run `python start.py`, click **Login**, and sign in with `alexcarter@gmail.com` / `password`.
+2. Open **My Rentals** to see that customer's reservations.
 3. Add two available items with future, non-overlapping booking times (day-rate items need whole 24-hour days) and complete the simulated checkout.
 4. Click **My Rentals** on the confirmation screen. Both items should appear under one payment in **Pending Pickup**, with business, dates, status, cost, and image fallback.
 5. Log out and back in: reservations persist although the cart is reset.

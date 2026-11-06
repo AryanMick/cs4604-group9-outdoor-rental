@@ -15,11 +15,11 @@
     <div>
     {% if logged_in %}
       <form action="{{ url_for('logout') }}" method="post" style="display: inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <button class="logout-link" type="submit">Logout</button>
       </form>
     {% else %}
       <a class="login-link" href="{{ url_for('login') }}">Login</a>
-      <a class="login-link" href="{{ url_for('login') }}">Register</a> <!-- TODO: Implement registration -->
     {% endif %}
     <a class="home-link" href="{{ url_for('dashboard') }}">Dashboard</a>
     </div>

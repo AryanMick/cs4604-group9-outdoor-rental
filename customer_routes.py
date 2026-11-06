@@ -30,10 +30,12 @@ def customer_view(view):
     """Require a customer session and turn database failures into an error page or JSON error."""
     @wraps(view)
     def wrapper(*args, **kwargs):
-        if session.get("role") != "customer" or not isinstance(session.get("customer_id"), int):
+        if (session.get("role") != "customer"
+                or not isinstance(session.get("customer_id"), int)
+                or not isinstance(session.get("cart_id"), int)):
             if _wants_json():
                 return jsonify(ok=False, error="Log in as a customer first."), 401
-            return redirect(url_for("customer.login_customer"))
+            return redirect(url_for("login"))
         try:
             return view(*args, **kwargs)
         except (RuntimeError, pymysql.MySQLError) as exc:
@@ -76,24 +78,10 @@ def inject_cart_count():
     return {"cart_count": 0}
 
 
-# @bp.route("/login/customer", methods=["GET", "POST"])
-# def login_customer():
-#     if request.method == "GET":
-#         if session.get("role") == "customer" and isinstance(session.get("customer_id"), int):
-#             return redirect(url_for("customer.select_business"))
-#         return render_template("customer/login.html")
-#     if not _csrf_ok():
-#         abort(400)
-#     try:
-#         customer_id, cart_id = customer_service.start_customer_session()
-#     except (RuntimeError, pymysql.MySQLError) as exc:
-#         current_app.logger.exception("Demo customer login failed")
-#         flash(str(exc), "error")
-#         return redirect(url_for("customer.login_customer"))
-#     token = session.get("csrf_token")
-#     session.clear()
-#     session.update(csrf_token=token, role="customer", customer_id=customer_id, cart_id=cart_id)
-#     return redirect(url_for("customer.select_business"))
+@bp.route("/login/customer")
+def login_customer():
+    """Keep old customer login links working without starting a demo session."""
+    return redirect(url_for("login"))
 
 
 @bp.route("/rentals")
