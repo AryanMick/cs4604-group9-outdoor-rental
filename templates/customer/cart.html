@@ -7,7 +7,7 @@
     <div class="cart-list">
       {% for item in cart['items'] %}
         <article class="cart-card">
-          <img src="{{ url_for('static', filename=item.image_url) }}" alt="{{ item.equipment_type }}">
+          <img src="{{ item.image_url|rental_image }}" alt="{{ item.equipment_type }}" loading="lazy">
           <div class="cart-details">
             <h2>{{ item.equipment_type }}</h2>
             <p class="muted">{{ item.business_name }}</p>

@@ -28,7 +28,7 @@
     <div class="equipment-grid">
       {% for item in equipment %}
         <article class="equipment-card">
-          <img src="{{ url_for('static', filename=item.image_url) }}" alt="{{ item.equipment_type }}" loading="lazy">
+          <img src="{{ item.image_url|rental_image }}" alt="{{ item.equipment_type }}" loading="lazy">
           <div class="card-body">
             <h2>{{ item.equipment_type }}</h2>
             <p class="price">{{ item.rate|money }} / {{ 'hour' if item.rate_unit == 'HOUR' else 'day' }}</p>

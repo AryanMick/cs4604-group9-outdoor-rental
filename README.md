@@ -45,8 +45,9 @@ If your database was created before that change, set a new database name in `db_
 Setup fills the new database and keeps the old one
 The MySQL account needs permission to create the database, triggers, and routines
 
-Rental photos live in `static/img/`; `placeholder.jpg` is the default for equipment without its own `image_url`.
-My Rentals checks whether each local image exists, then uses `placeholder.jpg` if present or the bundled `placeholder.svg` fallback.
+Equipment images for customer browsing and cart review live in `static/img/`; `image_url` stores a path relative to that folder. If an image file is missing, those pages use the bundled `img/placeholder.svg` fallback. My Rentals keeps its existing local-image check and placeholder fallback.
+
+For an existing database, run `python update_equipment_images.py` from the project folder after pulling the image update. The script uses the connection settings in `db_config.json`, changes only equipment still using the default `img/placeholder.jpg` path, and preserves all other data and custom image paths. It is safe to run more than once; database reinitialization is not needed.
 
 ### Test customer rentals
 
