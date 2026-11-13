@@ -20,6 +20,7 @@
       </form>
     {% else %}
       <a class="login-link" href="{{ url_for('login') }}">Login</a>
+      <a class="login-link" href="{{ url_for('register') }}">Register</a>
     {% endif %}
     <a class="home-link" href="{{ url_for('dashboard') }}">Dashboard</a>
     </div>

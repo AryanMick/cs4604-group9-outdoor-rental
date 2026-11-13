@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Register | Outdoor Rental Database{% endblock %}
+{% block content %}
+  <section class="auth-shell">
+    <div class="auth-card">
+      <h2>Register</h2>
+      <p class="auth-intro">Register a new customer account.</p>
+
+      {% for category, message in messages %}
+        <div class="auth-message {{ category }}" role="alert">{{ message }}</div>
+      {% endfor %}
+
+      <form class="auth-form" action="{{ url_for('register') }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label for="email">Email address</label>
+        <input id="email" name="email" type="email" autocomplete="email" required autofocus>
+
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+
+        <label for="first_name">First Name</label>
+        <input id="first_name" name="first_name" type="text" autocomplete="first-name" required>
+        <label for="last_name">Last Name</label>
+        <input id="last_name" name="last_name" type="text" autocomplete="last-name" required>
+
+        <button class="auth-submit" type="submit">Register</button>
+      </form>
+
+      <p class="auth-footer"><a href="{{ url_for('dashboard') }}">Return to dashboard</a></p>
+    </div>
+  </section>
+{% endblock %}

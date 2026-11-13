@@ -6,7 +6,7 @@ import math
 import secrets
 
 from flask import Flask, abort, flash, get_flashed_messages, redirect, render_template, request, session, url_for
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 import pymysql
 
 import db_tools
@@ -288,10 +288,73 @@ def login():
 
     return redirect(url_for("dashboard"))
 
-@app.route("/register", methods=["POST"])
+@app.route("/register", methods=["GET", "POST"])
 def register():
-    # Registration is not implemented; it must not grant a staff session.
-    abort(501, description="Registration is not available yet.")
+    if request.method == "GET":
+        return render_template("auth/register.html")
+    token = session.get("csrf_token")
+    if not token or not secrets.compare_digest(token, request.form.get("csrf_token", "")):
+        abort(400)
+    email = request.form.get("email", "").strip().lower()
+    password = request.form.get("password", "")
+    first_name = request.form.get("first_name", "").strip()
+    last_name = request.form.get("last_name", "").strip()
+    try:
+        connection = db_tools.connect()
+    except (RuntimeError, pymysql.MySQLError):
+        app.logger.exception("Registration connection failure")
+        flash("Unable to connect to the database.", "error")
+        return render_template("auth/register.html"), 503
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """INSERT INTO customer (first_name, last_name)
+                VALUES (%s, %s)
+                """,
+                (first_name, last_name),
+            )
+            customer_id = cursor.lastrowid
+            cursor.execute(
+                """
+                INSERT INTO auth_account (email, password_hash, role, customer_id)
+                VALUES (%s, %s, 'CUSTOMER', %s)
+                """,
+                (email, generate_password_hash(password), customer_id),
+            )
+            account_id = cursor.lastrowid
+        connection.commit()
+    except pymysql.err.IntegrityError as exc:
+        connection.rollback()
+
+        if exc.args and exc.args[0] == 1062: # Duplicate email
+            flash("That email is already registered.", "error")
+            return render_template("auth/register.html"), 409
+
+        app.logger.exception("Registration constraint failed")
+        flash("Unable to create the account.", "error")
+        return render_template("auth/register.html"), 400
+    except pymysql.MySQLError:
+        connection.rollback()
+        app.logger.exception("Registration database failure")
+        flash("Unable to create the account.", "error")
+        return render_template("auth/register.html"), 503
+    finally:
+        connection.close()
+
+    role = "customer"
+    try:
+        cart_id = customer_service.start_customer_session(customer_id)
+    except (RuntimeError, pymysql.MySQLError):
+        app.logger.exception("Customer cart setup failed")
+        flash("Your account was created, but we could not start your session. Please sign in.", "warning")
+        return render_template("auth/login.html"), 503
+    session.clear()
+    session["account_id"] = account_id
+    session["role"] = role
+    session["customer_id"] = customer_id
+    session["cart_id"] = cart_id
+
+    return redirect(url_for("dashboard"))
 
 @app.route("/logout", methods=["POST"])
 def logout():
