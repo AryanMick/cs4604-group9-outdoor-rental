@@ -130,6 +130,11 @@ def browse(business_id: int):
     equipment = customer_service.list_equipment(business_id, filter_start, filter_end)
     if query:
         equipment = [item for item in equipment if customer_service.equipment_matches(item, query)]
+    sort = request.args.get("sort", "name")
+    if sort not in ("name", "rate_asc", "rate_desc"):
+        sort = "name"
+    if sort != "name":
+        equipment = sorted(equipment, key=lambda item: item["rate"], reverse=sort == "rate_desc")
     return render_template(
         "customer/browse.html",
         business=business,
@@ -139,6 +144,7 @@ def browse(business_id: int):
         filter_active=filter_start is not None,
         filter_error=filter_error,
         query=query,
+        sort=sort,
     )
 
 

@@ -28,6 +28,7 @@ Stop with **Ctrl+C** and run the same command next time
 - **Login** uses the email and password in `auth_account`; registration is not available yet
 - Sample customer login: `alexcarter@gmail.com` with password `password`
 - Customers choose a business, add equipment to their own cart, and complete the practice checkout
+- On a business page, choose **Sort by** and click **Apply** to order equipment by name or listed rate
 - On the business selection page, search by equipment type, description, or business name. Equipment matches link to the matching items at that business; availability is checked when choosing rental dates.
 - Staff can view tables; admins can also add and delete records
 - To add a row as an admin, click **Add record**, fill in the required fields, then **Insert record**

@@ -15,18 +15,26 @@
     <label>Needed until
       <input id="filter-to" name="to" type="text" value="{{ filter_to }}" placeholder="Any time" autocomplete="off">
     </label>
-    <button class="button" type="submit">Filter</button>
+    <label>Sort by
+      <select name="sort">
+        <option value="name" {% if sort == 'name' %}selected{% endif %}>Name</option>
+        <option value="rate_asc" {% if sort == 'rate_asc' %}selected{% endif %}>Listed rate: low to high</option>
+        <option value="rate_desc" {% if sort == 'rate_desc' %}selected{% endif %}>Listed rate: high to low</option>
+      </select>
+    </label>
+    <button class="button" type="submit">Apply</button>
     {% if filter_active or filter_error %}
-      <a class="button button-secondary" href="{{ url_for('customer.browse', business_id=business.business_id, q=query or none) }}">Clear dates</a>
+      <a class="button button-secondary" href="{{ url_for('customer.browse', business_id=business.business_id, q=query or none, sort=sort if sort != 'name' else none) }}">Clear dates</a>
     {% endif %}
   </form>
+  {% if sort != 'name' %}<p class="muted">Sorted by the listed rate, which may be per hour or per day.</p>{% endif %}
   {% if filter_error %}<p class="notice notice-error">{{ filter_error }}</p>{% endif %}
   {% if filter_active %}
     <p class="muted">Showing equipment with availability between {{ filter_from }} and {{ filter_to }}.</p>
   {% endif %}
   {% if query %}
     <p class="muted">Showing equipment matching "{{ query }}".
-      <a href="{{ url_for('customer.browse', business_id=business.business_id, **{'from': filter_from, 'to': filter_to}) }}">Show all equipment</a>
+      <a href="{{ url_for('customer.browse', business_id=business.business_id, sort=sort if sort != 'name' else none, **{'from': filter_from, 'to': filter_to}) }}">Show all equipment</a>
     </p>
   {% endif %}
 

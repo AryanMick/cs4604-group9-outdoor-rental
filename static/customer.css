@@ -76,7 +76,7 @@ a { color: #175f49; }
   padding: 12px 14px; background: white; border: 1px solid var(--border); border-radius: 6px;
 }
 .filter-bar label { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; font-weight: bold; }
-.filter-bar input { padding: 8px; border: 1px solid #9da9a3; border-radius: 4px; min-width: 200px; font: inherit; }
+.filter-bar input, .filter-bar select { padding: 8px; border: 1px solid #9da9a3; border-radius: 4px; min-width: 200px; font: inherit; }
 
 /* Equipment grid: at most 3 columns, each at least 260px wide. */
 .equipment-grid {
