@@ -152,12 +152,37 @@ def end_customer_session(customer_id: int) -> None:
         connection.close()
 
 
-def list_businesses() -> list[dict]:
+def equipment_matches(item: dict, query: str) -> bool:
+    """Match equipment by type or description, ignoring case."""
+    term = query.strip().casefold()
+    return term in item["equipment_type"].casefold() or term in item["description"].casefold()
+
+
+def list_businesses(query: str = "") -> list[dict]:
     connection = db_tools.connect()
     try:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT business_id, business_name, address FROM business ORDER BY business_name")
-            return [{"business_id": r[0], "business_name": r[1], "address": r[2]} for r in cursor.fetchall()]
+            cursor.execute(
+                "SELECT b.business_id, b.business_name, b.address, e.equipment_type, e.description "
+                "FROM business b LEFT JOIN rental_equipment e "
+                "ON e.business_id=b.business_id AND e.status <> 'RETIRED' "
+                "ORDER BY b.business_name, b.business_id, e.equipment_type"
+            )
+            businesses = {}
+            term = query.strip().casefold()
+            for business_id, name, address, equipment_type, description in cursor.fetchall():
+                business = businesses.setdefault(business_id, {
+                    "business_id": business_id, "business_name": name, "address": address,
+                    "matching_equipment": [],
+                })
+                if term and equipment_type and equipment_matches(
+                    {"equipment_type": equipment_type, "description": description}, term
+                ) and equipment_type not in business["matching_equipment"]:
+                    business["matching_equipment"].append(equipment_type)
+            return [
+                business for business in businesses.values()
+                if not term or term in business["business_name"].casefold() or business["matching_equipment"]
+            ]
     finally:
         connection.close()
 

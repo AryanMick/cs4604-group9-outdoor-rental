@@ -26,8 +26,8 @@ TABLES = (
 )
 SCHEMA_TABLES = (*TABLES, "auth_account")
 EXPECTED_COUNTS = {
-    "business": 20,
-    "rental_equipment": 40,
+    "business": 21,
+    "rental_equipment": 50,
     "customer": 31,
     "reservation": 40,
     "payment": 30,
@@ -171,8 +171,9 @@ def setup() -> None:
 
         try:
             with connection.cursor() as cursor:
-                for statement in sql_statements("02_sample_data.sql"):
-                    cursor.execute(statement)
+                for filename in ("02_sample_data.sql", "04_boardshop_data.sql", "05_mountain_bike_data.sql"):
+                    for statement in sql_statements(filename):
+                        cursor.execute(statement)
             connection.commit()
         except Exception as exc:
             connection.rollback()

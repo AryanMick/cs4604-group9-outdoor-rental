@@ -1,4 +1,4 @@
-/* Customer pages: business search, time-range filter, and the slide-in booking panel. */
+/* Customer pages: time-range filter and the slide-in booking panel. */
 (function () {
   "use strict";
 
@@ -15,23 +15,6 @@
     toastElement.classList.add("show");
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => toastElement.classList.remove("show"), 4000);
-  }
-
-  /* ---------- Business search ---------- */
-  const searchInput = document.getElementById("business-search");
-  if (searchInput) {
-    const rows = Array.from(document.querySelectorAll("#business-list li"));
-    const emptyMessage = document.getElementById("business-empty");
-    searchInput.addEventListener("input", () => {
-      const query = searchInput.value.trim().toLowerCase();
-      let visible = 0;
-      rows.forEach((row) => {
-        const match = row.dataset.name.includes(query);
-        row.hidden = !match;
-        if (match) visible += 1;
-      });
-      emptyMessage.hidden = visible !== 0;
-    });
   }
 
   if (typeof flatpickr === "undefined") return;

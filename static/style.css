@@ -9,9 +9,9 @@
 body { margin: 0; }
 
 header {
-  min-height: 88px;
+  min-height: 120px;
   padding: 16px 3%;
-  background: #173b31;
+  background: linear-gradient(90deg, rgba(12, 35, 29, .65), rgba(12, 35, 29, .45)), url("img/blue-ridge-banner.jpg") center 55% / cover;
   color: white;
   display: flex;
   align-items: center;

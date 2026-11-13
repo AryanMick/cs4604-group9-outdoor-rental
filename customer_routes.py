@@ -96,7 +96,10 @@ def rentals():
 @bp.route("/shop")
 @customer_view
 def select_business():
-    return render_template("customer/businesses.html", businesses=customer_service.list_businesses())
+    query = request.args.get("q", "").strip()
+    return render_template(
+        "customer/businesses.html", businesses=customer_service.list_businesses(query), query=query,
+    )
 
 
 @bp.route("/shop/<int:business_id>")
@@ -123,7 +126,10 @@ def browse(business_id: int):
             filter_start = filter_end = None
             filter_error = str(exc)
 
+    query = request.args.get("q", "").strip()
     equipment = customer_service.list_equipment(business_id, filter_start, filter_end)
+    if query:
+        equipment = [item for item in equipment if customer_service.equipment_matches(item, query)]
     return render_template(
         "customer/browse.html",
         business=business,
@@ -132,6 +138,7 @@ def browse(business_id: int):
         filter_to=filter_to,
         filter_active=filter_start is not None,
         filter_error=filter_error,
+        query=query,
     )
 
 

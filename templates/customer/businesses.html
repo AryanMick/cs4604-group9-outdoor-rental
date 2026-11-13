@@ -1,22 +1,29 @@
 {% extends "customer/base.html" %}
-{% block title %}Choose a business{% endblock %}
+{% block title %}Find gear for your journey{% endblock %}
 {% block content %}
-  <h1>Choose a business</h1>
-  <p class="muted">Select the business you want to rent equipment from.</p>
+  <h1>Find gear for your journey</h1>
+  <p class="muted">Search a business or find equipment for your journey.</p>
 
-  <label class="visually-hidden" for="business-search">Search businesses</label>
-  <input id="business-search" class="search-input" type="search" placeholder="Search businesses by name"
-         autocomplete="off" autofocus>
+  <form class="business-search" method="get" action="{{ url_for('customer.select_business') }}">
+    <label class="visually-hidden" for="business-search">Search a business or find equipment for your journey</label>
+    <input id="business-search" name="q" class="search-input" type="search"
+           placeholder="Search a business or find equipment for your journey" value="{{ query }}" autocomplete="off">
+    <button class="button" type="submit">Search</button>
+    {% if query %}<a class="button button-secondary" href="{{ url_for('customer.select_business') }}">Clear</a>{% endif %}
+  </form>
 
   <ul id="business-list" class="business-list">
     {% for business in businesses %}
-      <li data-name="{{ business.business_name|lower }}">
-        <a href="{{ url_for('customer.browse', business_id=business.business_id) }}">
+      <li>
+        <a href="{{ url_for('customer.browse', business_id=business.business_id, q=query if business.matching_equipment else none) }}">
           <strong>{{ business.business_name }}</strong>
           <span>{{ business.address }}</span>
+          {% if business.matching_equipment %}
+            <span>Matching equipment: {{ business.matching_equipment|join(', ') }}</span>
+          {% endif %}
         </a>
       </li>
     {% endfor %}
   </ul>
-  <p id="business-empty" class="muted" hidden>No businesses match your search.</p>
+  {% if not businesses %}<p class="muted">No businesses match your search.</p>{% endif %}
 {% endblock %}

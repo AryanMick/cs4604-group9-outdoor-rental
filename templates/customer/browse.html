@@ -8,6 +8,7 @@
   <p class="muted">{{ business.address }}</p>
 
   <form class="filter-bar" method="get" action="{{ url_for('customer.browse', business_id=business.business_id) }}">
+    {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
     <label>Needed from
       <input id="filter-from" name="from" type="text" value="{{ filter_from }}" placeholder="Any time" autocomplete="off">
     </label>
@@ -16,12 +17,17 @@
     </label>
     <button class="button" type="submit">Filter</button>
     {% if filter_active or filter_error %}
-      <a class="button button-secondary" href="{{ url_for('customer.browse', business_id=business.business_id) }}">Clear</a>
+      <a class="button button-secondary" href="{{ url_for('customer.browse', business_id=business.business_id, q=query or none) }}">Clear dates</a>
     {% endif %}
   </form>
   {% if filter_error %}<p class="notice notice-error">{{ filter_error }}</p>{% endif %}
   {% if filter_active %}
     <p class="muted">Showing equipment with availability between {{ filter_from }} and {{ filter_to }}.</p>
+  {% endif %}
+  {% if query %}
+    <p class="muted">Showing equipment matching "{{ query }}".
+      <a href="{{ url_for('customer.browse', business_id=business.business_id, **{'from': filter_from, 'to': filter_to}) }}">Show all equipment</a>
+    </p>
   {% endif %}
 
   {% if equipment %}
@@ -46,7 +52,7 @@
       {% endfor %}
     </div>
   {% else %}
-    <p class="muted">No equipment matches{% if filter_active %} that time range{% endif %}.</p>
+    <p class="muted">No equipment matches{% if query %} your search{% endif %}{% if filter_active %} that time range{% endif %}.</p>
   {% endif %}
 
   <div id="panel-backdrop" class="panel-backdrop"></div>

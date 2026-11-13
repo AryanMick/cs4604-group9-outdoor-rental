@@ -26,8 +26,8 @@ def verify() -> dict:
             for table in db_tools.SCHEMA_TABLES:
                 counts[table] = scalar(cursor, f"SELECT COUNT(*) FROM `{table}`")
             assert counts == db_tools.EXPECTED_COUNTS
-            assert sum(counts.values()) == 392
-            checks.append("All 13 base tables have their expected counts (392 total rows)")
+            assert sum(counts.values()) == 403
+            checks.append("All 13 base tables have their expected counts (403 total rows)")
 
             primary_keys = scalar(
                 cursor,

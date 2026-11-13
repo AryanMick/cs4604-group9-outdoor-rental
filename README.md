@@ -28,6 +28,7 @@ Stop with **Ctrl+C** and run the same command next time
 - **Login** uses the email and password in `auth_account`; registration is not available yet
 - Sample customer login: `alexcarter@gmail.com` with password `password`
 - Customers choose a business, add equipment to their own cart, and complete the practice checkout
+- On the business selection page, search by equipment type, description, or business name. Equipment matches link to the matching items at that business; availability is checked when choosing rental dates.
 - Staff can view tables; admins can also add and delete records
 - To add a row as an admin, click **Add record**, fill in the required fields, then **Insert record**
 - Use `YYYY-MM-DD HH:MM:SS` for date and time fields and existing IDs for related records
@@ -48,6 +49,12 @@ The MySQL account needs permission to create the database, triggers, and routine
 Equipment images for customer browsing and cart review live in `static/img/`; `image_url` stores a path relative to that folder. If an image file is missing, those pages use the bundled `img/placeholder.svg` fallback. My Rentals keeps its existing local-image check and placeholder fallback.
 
 For an existing database, run `python update_equipment_images.py` from the project folder after pulling the image update. The script uses the connection settings in `db_config.json`, changes only equipment still using the default `img/placeholder.jpg` path, and preserves all other data and custom image paths. It is safe to run more than once; database reinitialization is not needed.
+
+John's Boardshop is included in new sample databases. For an existing database, run `python add_boardshop.py` once to add it and its mountain bike, rental and demo skis and snowboards, and snow helmet. The script uses `db_config.json`, adds only missing equipment types, and does not replace existing rows; it can be run again safely. Rates and the address are illustrative.
+
+New sample databases also have mountain bikes at Blue Ridge Outfitters, Trailhead Equipment, Summit Outdoor Gear, and Roanoke Trail Supply. For an existing sample database, run `python add_mountain_bikes.py` to add missing bikes at those four shops. It verifies the sample businesses before making changes and can be run again safely without replacing existing inventory.
+
+The boardshop equipment photos are from Pexels: [mountain bike](https://www.pexels.com/photo/blue-mountain-bike-with-dual-suspension-outdoors-36450314/), [skis](https://www.pexels.com/photo/pair-of-skis-on-snowy-surface-in-winter-setting-30417375/), [snowboard](https://www.pexels.com/photo/a-snowboard-on-a-snow-10933679/), and [snow helmet](https://www.pexels.com/photo/profile-of-a-ski-enthusiast-in-winter-gear-29767332/), used under the [Pexels license](https://www.pexels.com/license/). Images are illustrative and do not identify the actual rental equipment.
 
 ### Test customer rentals
 
@@ -72,6 +79,8 @@ Keep `db_config.json` and `.venv` on your computer only
 
 - `start.py` — starts the project
 - `db_tools.py` — connects to MySQL and loads the SQL files
+- `add_boardshop.py` — adds the demo boardshop to an existing database
+- `add_mountain_bikes.py` — adds demo mountain bikes to selected existing sample shops
 - `database/` — table definitions, sample data, and reservation triggers
 - `rental_interface.py` and `table_actions.py` — admin pages and database actions
 - `customer_routes.py` and `customer_service.py` — customer pages and their database logic
