@@ -14,6 +14,14 @@
     </div>
     <div>
     {% if logged_in %}
+      {% if is_admin %}
+        <a class="login-link" href="{{ url_for('new_business') }}">New Business</a>
+        <a class="login-link" href="{{ url_for('new_admin') }}">New Admin</a>
+      {% endif %}
+      {% if is_manager %}
+        <a class="login-link" href="{{ url_for('new_employee') }}">New Employee</a>
+        <a class="login-link" href="{{ url_for('new_manager') }}">New Manager</a>
+      {% endif %}
       <form action="{{ url_for('logout') }}" method="post" style="display: inline;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <button class="logout-link" type="submit">Logout</button>

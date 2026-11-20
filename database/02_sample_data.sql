@@ -176,13 +176,13 @@ FROM customer;
 INSERT INTO auth_account (email, password_hash, role, customer_id, employee_id, manager_id, admin_id)
 SELECT LOWER(CONCAT(first_name, last_name, '@gmail.com')),
        'scrypt:32768:8:1$QYc8361ZM3BORR7C$034417a8b35fd9f1af3de4f5813b677fb568f25261600357b629b9660bb545f80480bb9e06fe70880b08f507b35231cf263eeadf23ac6082bb6f5aa49711c986',
-       'STAFF', NULL, employee_id, NULL, NULL
+       'EMPLOYEE', NULL, employee_id, NULL, NULL
 FROM employee;
 
 INSERT INTO auth_account (email, password_hash, role, customer_id, employee_id, manager_id, admin_id)
 SELECT LOWER(CONCAT(first_name, last_name, '@gmail.com')),
        'scrypt:32768:8:1$QYc8361ZM3BORR7C$034417a8b35fd9f1af3de4f5813b677fb568f25261600357b629b9660bb545f80480bb9e06fe70880b08f507b35231cf263eeadf23ac6082bb6f5aa49711c986',
-       'STAFF', NULL, NULL, manager_id, NULL
+       'MANAGER', NULL, NULL, manager_id, NULL
 FROM manager;
 
 INSERT INTO auth_account (email, password_hash, role, customer_id, employee_id, manager_id, admin_id)

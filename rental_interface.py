@@ -24,15 +24,22 @@ CHOICES = (*db_tools.TABLES, *VIEWS)
 ROWS_PER_PAGE = 20
 
 def is_logged_in() -> bool:
-    return session.get("role") in {"customer", "staff", "admin"}
+    return session.get("role") in {"customer", "employee", "manager", "admin"}
 
 def is_customer() -> bool:
     return session.get("role") == "customer"
 
+def is_employee() -> bool:
+    """True for a signed-in employee"""
+    return session.get("role") == "employee"
+
+def is_manager() -> bool:
+    """True for a signed-in manager"""
+    return session.get("role") == "manager"
+
 def is_staff() -> bool:
     """True for a signed-in staff account."""
-    return session.get("role") == "staff"
-
+    return is_employee() or is_manager()
 
 def is_admin() -> bool:
     """True for the admin role."""
@@ -40,15 +47,25 @@ def is_admin() -> bool:
 
 def is_elevated() -> bool:
     """True for staff and admin roles."""
-    return session.get("role") in {"staff", "admin"}
+    return is_staff() or is_admin()
 
 def deny_unless_staff() -> None:
-    """Abort with 403 for customers and 401 for visitors who are not logged in."""
+    """Abort with 403 for customers/admins and 401 for visitors who are not logged in."""
     if not is_staff():
         abort(403 if is_logged_in() else 401)
 
+def deny_unless_employee() -> None:
+    """Abort with 401 if not logged in. 403 if not employee"""
+    if not is_employee():
+        abort(403 if is_logged_in() else 401)
+
+def deny_unless_manager() -> None:
+    """Abort with 401 if not logged in. 403 if not manager"""
+    if not is_manager():
+        abort(403 if is_logged_in() else 401)
+
 def deny_unless_admin() -> None:
-    """Abort with 403 for customers and 401 for visitors who are not logged in."""
+    """Abort with 403 for customers/staff and 401 for visitors who are not logged in."""
     if not is_admin():
         abort(403 if is_logged_in() else 401)
 
@@ -189,6 +206,7 @@ def inject_form_helpers():
         "logged_in": is_logged_in(),
         "is_elevated": is_elevated(),
         "is_admin": is_admin(),
+        "is_manager": is_manager()
     }
 
 
@@ -251,9 +269,14 @@ def login():
             with connection.cursor() as cursor:
                 cursor.execute(
                     """
-                    SELECT account_id, password_hash, role, customer_id
-                    FROM auth_account
-                    WHERE email = %s
+                    SELECT aa.account_id, aa.password_hash, aa.role,
+                           aa.customer_id, aa.employee_id, aa.manager_id, aa.admin_id,
+                           m.business_id,
+                           e.manager_id AS employee_manager_id
+                    FROM auth_account as aa
+                    LEFT JOIN employee e ON e.employee_id = aa.employee_id
+                    LEFT JOIN manager m ON m.manager_id = COALESCE(aa.manager_id, e.manager_id)
+                    WHERE aa.email = %s
                     """,
                     (email,),
                 )
@@ -282,9 +305,20 @@ def login():
     session.clear()
     session["account_id"] = account[0]
     session["role"] = role
-    if role == "customer":
-        session["customer_id"] = account[3]
-        session["cart_id"] = cart_id
+    match (role):
+        case "customer":
+            session["customer_id"] = account[3]
+            session["role_id"] = account[3]
+            session["cart_id"] = cart_id
+        case "employee":
+            session["role_id"] = account[4]
+            session["manager_id"] = account[8]
+            session["business_id"] = account[7]
+        case "manager":
+            session["role_id"] = account[5]
+            session["business_id"] = account[7]
+        case "admin":
+            session["role_id"] = account[6]
 
     return redirect(url_for("dashboard"))
 
@@ -354,6 +388,234 @@ def register():
     session["customer_id"] = customer_id
     session["cart_id"] = cart_id
 
+    return redirect(url_for("dashboard"))
+
+@app.route("/new_business", methods=["GET", "POST"])
+def new_business():
+    deny_unless_admin()
+    if (request.method == "GET"):
+        return render_template("auth/new_business.html")
+
+    business_name = request.form.get("business_name", "").strip()
+    business_address = request.form.get("business_address", "").strip()
+    email = request.form.get("email", "").strip().lower()
+    password = request.form.get("password", "")
+    first_name = request.form.get("first_name", "").strip()
+    last_name = request.form.get("last_name", "").strip()
+    try:
+        connection = db_tools.connect()
+    except (RuntimeError, pymysql.MySQLError):
+        app.logger.exception("Registration connection failure")
+        flash("Unable to connect to the database.", "error")
+        return render_template("auth/new_business.html"), 503
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """INSERT INTO business (business_name, address)
+                VALUES (%s, %s)
+                """,
+                (business_name, business_address),
+            )
+            business_id = cursor.lastrowid
+            cursor.execute(
+                """
+                INSERT INTO manager (first_name, last_name, business_id)
+                VALUES (%s, %s, %s)
+                """,
+                (first_name, last_name, business_id)
+            )
+            manager_id = cursor.lastrowid
+            cursor.execute(
+                """
+                INSERT INTO auth_account (email, password_hash, role, manager_id)
+                VALUES (%s, %s, 'MANAGER', %s)
+                """,
+                (email, generate_password_hash(password), manager_id),
+            )
+        connection.commit()
+    except pymysql.err.IntegrityError as exc:
+        connection.rollback()
+
+        if exc.args and exc.args[0] == 1062: # Duplicate email
+            flash("That email is already registered.", "error")
+            return render_template("auth/new_business.html"), 409
+
+        app.logger.exception("Registration constraint failed")
+        flash("Unable to create the account.", "error")
+        return render_template("auth/new_business.html"), 400
+    except pymysql.MySQLError:
+        connection.rollback()
+        app.logger.exception("Registration database failure")
+        flash("Unable to create the account.", "error")
+        return render_template("auth/new_business.html"), 503
+    finally:
+        connection.close()
+
+    flash("Successfully made a new business and manager account")
+    return redirect(url_for("dashboard"))
+
+@app.route("/new_admin", methods=["GET", "POST"])
+def new_admin():
+    deny_unless_admin()
+    if (request.method == "GET"):
+        return render_template("auth/new_admin.html")
+    
+    email = request.form.get("email", "").strip().lower()
+    password = request.form.get("password", "")
+    first_name = request.form.get("first_name", "").strip()
+    last_name = request.form.get("last_name", "").strip()
+    try:
+        connection = db_tools.connect()
+    except (RuntimeError, pymysql.MySQLError):
+        app.logger.exception("Registration connection failure")
+        flash("Unable to connect to the database.", "error")
+        return render_template("auth/new_admin.html"), 503
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """INSERT INTO admin (first_name, last_name)
+                VALUES (%s, %s)
+                """,
+                (first_name, last_name),
+            )
+            admin_id = cursor.lastrowid
+            cursor.execute(
+                """
+                INSERT INTO auth_account (email, password_hash, role, admin_id)
+                VALUES (%s, %s, 'ADMIN', %s)
+                """,
+                (email, generate_password_hash(password), admin_id),
+            )
+        connection.commit()
+    except pymysql.err.IntegrityError as exc:
+        connection.rollback()
+
+        if exc.args and exc.args[0] == 1062: # Duplicate email
+            flash("That email is already registered.", "error")
+            return render_template("auth/new_admin.html"), 409
+
+        app.logger.exception("Registration constraint failed")
+        flash("Unable to create the account.", "error")
+        return render_template("auth/new_admin.html"), 400
+    except pymysql.MySQLError:
+        connection.rollback()
+        app.logger.exception("Registration database failure")
+        flash("Unable to create the account.", "error")
+        return render_template("auth/new_admin.html"), 503
+    finally:
+        connection.close()
+
+    flash("Successfully made a new admin account")
+    return redirect(url_for("dashboard"))
+
+@app.route("/new_employee", methods=["GET", "POST"])
+def new_employee():
+    deny_unless_manager()
+    if (request.method == "GET"):
+        return render_template("auth/new_employee.html")
+    
+    email = request.form.get("email", "").strip().lower()
+    password = request.form.get("password", "")
+    first_name = request.form.get("first_name", "").strip()
+    last_name = request.form.get("last_name", "").strip()
+    manager_id = session["role_id"]
+    try:
+        connection = db_tools.connect()
+    except (RuntimeError, pymysql.MySQLError):
+        app.logger.exception("Registration connection failure")
+        flash("Unable to connect to the database.", "error")
+        return render_template("auth/new_employee.html"), 503
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """INSERT INTO employee (first_name, last_name, manager_id)
+                VALUES (%s, %s, %s)
+                """,
+                (first_name, last_name, manager_id),
+            )
+            employee_id = cursor.lastrowid
+            cursor.execute(
+                """
+                INSERT INTO auth_account (email, password_hash, role, employee_id)
+                VALUES (%s, %s, 'EMPLOYEE', %s)
+                """,
+                (email, generate_password_hash(password), employee_id),
+            )
+        connection.commit()
+    except pymysql.err.IntegrityError as exc:
+        connection.rollback()
+
+        if exc.args and exc.args[0] == 1062: # Duplicate email
+            flash("That email is already registered.", "error")
+            return render_template("auth/register.html"), 409
+
+        app.logger.exception("Registration constraint failed")
+        flash("Unable to create the account.", "error")
+        return render_template("auth/new_employee.html"), 400
+    except pymysql.MySQLError:
+        connection.rollback()
+        app.logger.exception("Registration database failure")
+        flash("Unable to create the account.", "error")
+        return render_template("auth/new_employee.html"), 503
+    finally:
+        connection.close()
+
+    flash("Successfully made a new employee account")
+    return redirect(url_for("dashboard"))
+
+@app.route("/new_manager", methods=["GET", "POST"])
+def new_manager():
+    deny_unless_manager()
+    if (request.method == "GET"):
+        return render_template("auth/new_manager.html")
+    
+    email = request.form.get("email", "").strip().lower()
+    password = request.form.get("password", "")
+    first_name = request.form.get("first_name", "").strip()
+    last_name = request.form.get("last_name", "").strip()
+    business_id = session["business_id"]
+    try:
+        connection = db_tools.connect()
+    except (RuntimeError, pymysql.MySQLError):
+        app.logger.exception("Registration connection failure")
+        flash("Unable to connect to the database.", "error")
+        return render_template("auth/new_manager.html"), 503
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """INSERT INTO manager (first_name, last_name, business_id)
+                VALUES (%s, %s, %s)
+                """,
+                (first_name, last_name, business_id),
+            )
+            manager_id = cursor.lastrowid
+            cursor.execute(
+                """
+                INSERT INTO auth_account (email, password_hash, role, manager_id)
+                VALUES (%s, %s, 'MANAGER', %s)
+                """,
+                (email, generate_password_hash(password), manager_id),
+            )
+        connection.commit()
+    except pymysql.err.IntegrityError as exc:
+        connection.rollback()
+
+        if exc.args and exc.args[0] == 1062: # Duplicate email
+            flash("That email is already registered.", "error")
+            return render_template("auth/new_manager.html"), 409
+
+        app.logger.exception("Registration constraint failed")
+        flash("Unable to create the account.", "error")
+        return render_template("auth/new_manager.html"), 400
+    except pymysql.MySQLError:
+        connection.rollback()
+        app.logger.exception("Registration database failure")
+        flash("Unable to create the account.", "error")
+        return render_template("auth/new_manager.html"), 503
+    finally:
+        connection.close()
+
+    flash("Successfully made a new manager account")
     return redirect(url_for("dashboard"))
 
 @app.route("/logout", methods=["POST"])

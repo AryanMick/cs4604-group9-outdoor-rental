@@ -121,14 +121,15 @@ CREATE TABLE auth_account (
     admin_id INT NULL UNIQUE,
     CONSTRAINT auth_email_not_blank CHECK (TRIM(email) <> ''),
     CONSTRAINT auth_email_unique UNIQUE (email),
-    CONSTRAINT auth_role_valid CHECK (role IN ('CUSTOMER', 'STAFF', 'ADMIN')),
+    CONSTRAINT auth_role_valid CHECK (role IN ('CUSTOMER', 'EMPLOYEE', 'MANAGER', 'ADMIN')),
     CONSTRAINT auth_customer_fk FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
     CONSTRAINT auth_employee_fk FOREIGN KEY (employee_id) REFERENCES employee (employee_id),
     CONSTRAINT auth_manager_fk FOREIGN KEY (manager_id) REFERENCES manager (manager_id),
     CONSTRAINT auth_admin_fk FOREIGN KEY (admin_id) REFERENCES admin (admin_id),
     CONSTRAINT auth_role_link_valid CHECK (
         (role = 'CUSTOMER' AND customer_id IS NOT NULL AND employee_id IS NULL AND manager_id IS NULL AND admin_id IS NULL)
-        OR (role = 'STAFF' AND customer_id IS NULL AND (employee_id IS NOT NULL OR manager_id IS NOT NULL) AND admin_id IS NULL)
+        OR (role = 'EMPLOYEE' AND customer_id IS NULL AND employee_id IS NOT NULL AND manager_id IS NULL AND admin_id IS NULL)
+        OR (role = 'MANAGER' AND customer_id IS NULL AND employee_id IS NULL AND manager_id IS NOT NULL AND admin_id IS NULL)
         OR (role = 'ADMIN' AND customer_id IS NULL AND employee_id IS NULL AND manager_id IS NULL AND admin_id IS NOT NULL)
     )
 ) ENGINE=InnoDB;

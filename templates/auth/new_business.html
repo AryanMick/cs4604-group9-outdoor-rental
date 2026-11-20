@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}New Business | Outdoor Rental Database{% endblock %}
+{% block content %}
+    <section class="auth-shell">
+    <div class="auth-card">
+      <h2>New Business and Manager</h2>
+      <p class="auth-intro">Register a new business and manager account.</p>
+
+      {% for category, message in messages %}
+        <div class="auth-message {{ category }}" role="alert">{{ message }}</div>
+      {% endfor %}
+
+      <form class="auth-form" action="{{ url_for('new_business') }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+       
+        <label for="business_name">Business Name</label>
+        <input id="business_name" name="business_name" type="text" autocomplete="business-name" required autofocus>
+        
+        <label for="business_address">Business Address</label>
+        <input id="business_address" name="business_address" type="text" autocomplete="business-address" required>
+        
+        <label for="email">Manager Email Address</label>
+        <input id="email" name="email" type="email" autocomplete="email" required>
+
+        <label for="password">Manager Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+
+        <label for="first_name">Manager First Name</label>
+        <input id="first_name" name="first_name" type="text" autocomplete="first-name" required>
+        <label for="last_name">Manager Last Name</label>
+        <input id="last_name" name="last_name" type="text" autocomplete="last-name" required>
+
+        <button class="auth-submit" type="submit">Create</button>
+      </form>
+
+      <p class="auth-footer"><a href="{{ url_for('dashboard') }}">Return to dashboard</a></p>
+    </div>
+  </section>
+{% endblock %}
