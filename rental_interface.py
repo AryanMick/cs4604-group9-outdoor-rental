@@ -204,9 +204,11 @@ def inject_form_helpers():
         "primary_keys": table_actions.TABLE_PRIMARY_KEYS,
         "base_tables": db_tools.TABLES,
         "logged_in": is_logged_in(),
+        "is_customer": is_customer(),
         "is_elevated": is_elevated(),
         "is_admin": is_admin(),
-        "is_manager": is_manager()
+        "is_manager": is_manager(),
+        "is_employee": is_employee()
     }
 
 
@@ -272,7 +274,7 @@ def login():
                     SELECT aa.account_id, aa.password_hash, aa.role,
                            aa.customer_id, aa.employee_id, aa.manager_id, aa.admin_id,
                            m.business_id,
-                           e.manager_id AS employee_manager_id
+                           e.manager_id
                     FROM auth_account as aa
                     LEFT JOIN employee e ON e.employee_id = aa.employee_id
                     LEFT JOIN manager m ON m.manager_id = COALESCE(aa.manager_id, e.manager_id)
@@ -321,6 +323,82 @@ def login():
             session["role_id"] = account[6]
 
     return redirect(url_for("dashboard"))
+
+@app.route("/profile", methods=["GET"])
+def profile():
+    deny_unless_logged_in()
+
+    try:
+        connection = db_tools.connect()
+    except (RuntimeError, pymysql.MySQLError):
+        app.logger.exception("Profile connection failure")
+        flash("Unable to connect to the database.", "error")
+        return redirect(url_for("dashboard")), 503
+
+    try:
+        with connection.cursor() as cursor:
+            if is_customer():
+                cursor.execute(
+                    """
+                    SELECT aa.email, c.first_name, c.last_name
+                    FROM  auth_account as aa
+                    LEFT JOIN customer c on c.customer_id = aa.customer_id
+                    WHERE aa.account_id = %s
+                    """,
+                    (session["account_id"])
+                )
+            elif is_employee():
+                cursor.execute(
+                    """
+                    SELECT aa.email, e.first_name, e.last_name,
+                           m.first_name, m.last_name,
+                           b.business_name, b.address
+                    FROM  auth_account as aa
+                    LEFT JOIN employee e on e.employee_id = aa.employee_id
+                    LEFT JOIN manager m on m.manager_id = e.manager_id
+                    LEFT JOIN business b on b.business_id = m.business_id
+                    WHERE aa.account_id = %s
+                    """,
+                    (session["account_id"])
+                )
+            elif is_manager():
+                cursor.execute(
+                    """
+                    SELECT aa.email, m.first_name, m.last_name,
+                            b.business_name, b.address
+                    FROM  auth_account as aa
+                    LEFT JOIN manager m on m.manager_id = aa.manager_id
+                    LEFT JOIN business b on b.business_id = m.business_id
+                    WHERE aa.account_id = %s
+                    """,
+                    (session["account_id"])
+                )
+            elif is_admin():
+                cursor.execute(
+                    """
+                    SELECT aa.email, a.first_name, a.last_name
+                    FROM  auth_account as aa
+                    LEFT JOIN admin a on a.admin_id = aa.admin_id
+                    WHERE aa.account_id = %s
+                    """,
+                    (session["account_id"])
+                )
+            else:
+                app.logger.exception("Invalid role in get profile")
+                flash("Invalid role. Log out and back in again", "error")
+                return redirect(url_for("dashboard")), 503
+            profile_data = cursor.fetchone()
+    except (RuntimeError, pymysql.MySQLError):
+        app.logger.exception("Profile database failure")
+        flash("Unable to view profile. Check the database connection and try again.", "error")
+        return redirect(url_for("dashboard")), 503
+    finally:
+        connection.close()
+
+    if profile_data is None:
+        abort(404)
+
+    return render_template("auth/profile.html", profile=profile_data)
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -389,6 +467,69 @@ def register():
     session["cart_id"] = cart_id
 
     return redirect(url_for("dashboard"))
+
+@app.route("/profile/change_password", methods=["GET", "POST"])
+def change_password():
+    deny_unless_logged_in()
+    if (request.method == "GET"):
+        return render_template("auth/change_password.html")
+    token = session.get("csrf_token")
+    if not token or not secrets.compare_digest(token, request.form.get("csrf_token", "")):
+        abort(400)
+
+    current_password = request.form.get("current_password", "")
+    new_password = request.form.get("new_password", "")
+    confirm_password = request.form.get("confirm_password", "")
+
+    if (confirm_password != new_password):
+        flash("Passwords must match", "error")
+        return render_template("auth/change_password.html")
+
+    try:
+        connection = db_tools.connect()
+    except (RuntimeError, pymysql.MySQLError):
+        app.logger.exception("Change password connection failure")
+        flash("Unable to connect to the database.", "error")
+        return redirect(url_for("dashboard")), 503
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT password_hash
+                FROM auth_account
+                WHERE account_id = %s
+                """,
+                (session["account_id"])
+            )
+            account = cursor.fetchone()
+            if (account is None):
+                flash("Could not fetch account", "error")
+                return render_template("auth/change_password.html")
+            if not check_password_hash(account[0], current_password):
+                flash("That is not your current password", "error")
+                return render_template("auth/change_password.html"), 401
+
+            cursor.execute(
+                """
+                UPDATE auth_account
+                SET password_hash = %s
+                WHERE account_id = %s
+                """,
+                (generate_password_hash(new_password), session["account_id"])
+            )
+            connection.commit()
+
+    except (RuntimeError, pymysql.MySQLError):
+        connection.rollback()
+        app.logger.exception("Change password database failure")
+        flash("Unable to change password. Check the database connection and try again.", "error")
+        return redirect(url_for("profile")), 503
+    finally:
+        connection.close()
+
+    flash("Successfully changed password")
+    return redirect(url_for("profile"))
 
 @app.route("/new_business", methods=["GET", "POST"])
 def new_business():

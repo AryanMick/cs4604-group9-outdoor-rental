@@ -22,6 +22,7 @@
         <a class="login-link" href="{{ url_for('new_employee') }}">New Employee</a>
         <a class="login-link" href="{{ url_for('new_manager') }}">New Manager</a>
       {% endif %}
+      <a class="profile-link" href="{{ url_for('profile') }}">Profile</a>
       <form action="{{ url_for('logout') }}" method="post" style="display: inline;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <button class="logout-link" type="submit">Logout</button>

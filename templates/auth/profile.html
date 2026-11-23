@@ -1,0 +1,44 @@
+{% extends "customer/base.html" if is_customer else "base.html" %}
+{% block title %}Profile | Outdoor Rental Database{% endblock %}
+{% block content %}
+  {% set data = profile_data if profile_data is defined else profile %}
+  <section class="auth-shell">
+    <div class="auth-card">
+      <p class="auth-kicker">Account profile</p>
+      <h2>{{ data[1] }} {{ data[2] }}</h2>
+
+      <dl class="profile-details">
+        <dt>Email</dt>
+        <dd>{{ data[0] }}</dd>
+
+        <dt>Role</dt>
+        <dd>
+          {% if is_customer %}Customer
+          {% elif is_employee %}Employee
+          {% elif is_manager %}Manager
+          {% elif is_admin %}Administrator
+          {% endif %}
+        </dd>
+
+        {% if is_employee %}
+          <dt>Manager</dt>
+          <dd>{{ data[3] }} {{ data[4] }}</dd>
+          <dt>Business</dt>
+          <dd>{{ data[5] }}</dd>
+          <dt>Business address</dt>
+          <dd>{{ data[6] }}</dd>
+        {% elif is_manager %}
+          <dt>Business</dt>
+          <dd>{{ data[3] }}</dd>
+          <dt>Business address</dt>
+          <dd>{{ data[4] }}</dd>
+        {% endif %}
+      </dl>
+
+      <div class="profile-actions">
+        <a class="auth-submit" href="{{ url_for('change_password') }}">Change Password</a>
+      </div>
+      <p class="auth-footer"><a href="{{ url_for('dashboard') }}">Return to dashboard</a></p>
+    </div>
+  </section>
+{% endblock %}
