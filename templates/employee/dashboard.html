@@ -14,6 +14,9 @@
     <a href="{{ url_for('employee_dashboard', tab='rentals') }}" {% if active_tab == 'rentals' %}aria-current="page"{% endif %}>
       {{ business_name }} Rentals
     </a>
+    <a href="{{ url_for('employee_dashboard', tab='business') }}" {% if active_tab == 'business' %}aria-current="page"{% endif %}>
+      {{ business_name }} data
+    </a>
     <a href="{{ url_for('employee_dashboard', tab='checkout') }}" {% if active_tab == 'checkout' %}aria-current="page"{% endif %}>
       Customer checkout
     </a>

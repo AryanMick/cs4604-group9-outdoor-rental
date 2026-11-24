@@ -194,7 +194,7 @@ def employee_dashboard():
     if not isinstance(business_id, int):
         abort(403)
     tab = request.args.get("tab", "rentals")
-    if tab not in {"rentals", "checkout"}:
+    if tab not in {"rentals", "business", "checkout"}:
         abort(404)
     try:
         business_name = manager_service.get_business_name(business_id)

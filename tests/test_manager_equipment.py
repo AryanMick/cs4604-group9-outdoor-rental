@@ -128,6 +128,7 @@ class EmployeeDashboardTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Employee dashboard", response.data)
         self.assertIn(b"Summit Rentals Rentals", response.data)
+        self.assertIn(b"Summit Rentals data", response.data)
         self.assertIn(b"Customer checkout", response.data)
         self.assertNotIn(b"Equipment name", response.data)
         self.assertIn(b'href="/employee?tab=rentals" aria-current="page"', response.data)
@@ -144,6 +145,15 @@ class EmployeeDashboardTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Customer checkout", response.data)
         self.assertNotIn(b"Equipment name", response.data)
+
+    def test_employee_business_data_tab_is_available_and_active(self):
+        with self.client.session_transaction() as session:
+            session.update(role="employee", role_id=12, business_id=3, csrf_token="employee-token")
+        with patch.object(manager_service, "get_business_name", return_value="Summit Rentals"):
+            response = self.client.get("/employee?tab=business")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Summit Rentals data", response.data)
+        self.assertIn(b'href="/employee?tab=business" aria-current="page"', response.data)
 
 
 class ManagerEquipmentServiceTests(unittest.TestCase):
