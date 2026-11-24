@@ -98,6 +98,17 @@ class CustomerPageTests(unittest.TestCase):
         self.count.start()
         self.addCleanup(self.count.stop)
 
+    def test_anonymous_homepage_redirects_to_login_with_register_only(self):
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.location.endswith("/login"))
+        login_page = self.client.get("/login")
+        self.assertEqual(login_page.status_code, 200)
+        self.assertIn(b"Sign in", login_page.data)
+        self.assertIn(b"Register", login_page.data)
+        self.assertNotIn(b">Dashboard</a>", login_page.data)
+        self.assertNotIn(b">Login</a>", login_page.data)
+
     def test_startup_detects_database_without_auth_accounts(self):
         connection = MagicMock()
         cursor = connection.cursor.return_value.__enter__.return_value
@@ -135,7 +146,15 @@ class CustomerPageTests(unittest.TestCase):
     def auth_connection(self, role="CUSTOMER", customer_id=1):
         connection = MagicMock()
         cursor = connection.cursor.return_value.__enter__.return_value
-        cursor.fetchone.return_value = (101, self.password_hash, role, customer_id)
+        employee_id = 2 if role == "EMPLOYEE" else None
+        manager_id = 3 if role == "MANAGER" else None
+        admin_id = 4 if role == "ADMIN" else None
+        business_id = 5 if role in {"EMPLOYEE", "MANAGER"} else None
+        employee_manager_id = 3 if role == "EMPLOYEE" else None
+        cursor.fetchone.return_value = (
+            101, self.password_hash, role, customer_id, employee_id, manager_id,
+            admin_id, business_id, employee_manager_id,
+        )
         return connection, cursor
 
     def test_customer_login_uses_authenticated_id_and_replaces_old_session(self):
@@ -171,7 +190,7 @@ class CustomerPageTests(unittest.TestCase):
             self.assertNotIn("role", session)
 
     def test_staff_and_admin_login_do_not_create_customer_carts(self):
-        for role in ("STAFF", "ADMIN"):
+        for role in ("EMPLOYEE", "MANAGER", "ADMIN"):
             self.login_session(31)
             connection, _ = self.auth_connection(role, None)
             with patch.object(cs.db_tools, "connect", return_value=connection):
@@ -182,6 +201,9 @@ class CustomerPageTests(unittest.TestCase):
                 self.assertEqual(session["role"], role.lower())
                 self.assertNotIn("cart_id", session)
                 self.assertNotIn("customer_id", session)
+                if role == "MANAGER":
+                    self.assertEqual(session["role_id"], 3)
+                    self.assertEqual(session["business_id"], 5)
 
     def test_login_database_error_displays_notice(self):
         with patch.object(cs.db_tools, "connect", side_effect=RuntimeError("Offline")):
@@ -203,12 +225,12 @@ class CustomerPageTests(unittest.TestCase):
             self.assertNotIn("customer_id", session)
             self.assertNotIn("cart_id", session)
 
-    def test_registration_does_not_grant_staff_access(self):
-        self.assertEqual(self.client.post("/register").status_code, 501)
+    def test_registration_requires_csrf_before_creating_an_account(self):
+        self.assertEqual(self.client.post("/register").status_code, 400)
         with self.client.session_transaction() as session:
             self.assertNotIn("role", session)
         self.login_session(1)
-        self.assertEqual(self.client.post("/register").status_code, 501)
+        self.assertEqual(self.client.post("/register").status_code, 400)
         with self.client.session_transaction() as session:
             self.assertEqual(session["role"], "customer")
 

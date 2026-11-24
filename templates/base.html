@@ -12,8 +12,9 @@
       <h1>Outdoor Equipment Rental Management System</h1>
       <p>CS4604 · Group 9 · MySQL 8.4 · Python 3 / Flask</p>
     </div>
-    <div>
+    <nav class="header-actions" aria-label="Account actions">
     {% if logged_in %}
+      <div class="header-action-row header-action-primary">
       {% if is_admin %}
         <a class="login-link" href="{{ url_for('new_business') }}">New Business</a>
         <a class="login-link" href="{{ url_for('new_admin') }}">New Admin</a>
@@ -22,17 +23,21 @@
         <a class="login-link" href="{{ url_for('new_employee') }}">New Employee</a>
         <a class="login-link" href="{{ url_for('new_manager') }}">New Manager</a>
       {% endif %}
+      </div>
+      <div class="header-action-row header-action-secondary">
       <a class="profile-link" href="{{ url_for('profile') }}">Profile</a>
-      <form action="{{ url_for('logout') }}" method="post" style="display: inline;">
+      <form class="header-logout-form" action="{{ url_for('logout') }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <button class="logout-link" type="submit">Logout</button>
       </form>
+      <a class="home-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+      </div>
     {% else %}
-      <a class="login-link" href="{{ url_for('login') }}">Login</a>
+      <div class="header-action-row header-action-primary">
       <a class="login-link" href="{{ url_for('register') }}">Register</a>
+      </div>
     {% endif %}
-    <a class="home-link" href="{{ url_for('dashboard') }}">Dashboard</a>
-    </div>
+    </nav>
   </header>
 
   <main>
@@ -51,7 +56,7 @@
       </section>
       {% endif %}
     {% endif %}
-    {% if logged_in and is_elevated %}
+    {% if logged_in and is_elevated and not is_manager and not is_employee %}
       <form class="table-picker" action="{{ url_for('choose_table') }}" method="get">
         <label for="table">Select a table or view</label>
         <select id="table" name="table" onchange="this.form.submit()">

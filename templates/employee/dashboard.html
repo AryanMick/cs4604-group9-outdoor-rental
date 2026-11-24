@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}{{ business_name }} Employee Dashboard{% endblock %}
+{% block content %}
+  <section class="manager-heading">
+    <p class="manager-kicker">Employee dashboard</p>
+    <h2>{{ business_name }}</h2>
+  </section>
+
+  {% for category, message in messages %}
+    <p class="manager-message {{ category }}" role="status">{{ message }}</p>
+  {% endfor %}
+
+  <nav class="manager-tabs" aria-label="Employee sections">
+    <a href="{{ url_for('employee_dashboard', tab='rentals') }}" {% if active_tab == 'rentals' %}aria-current="page"{% endif %}>
+      {{ business_name }} Rentals
+    </a>
+    <a href="{{ url_for('employee_dashboard', tab='checkout') }}" {% if active_tab == 'checkout' %}aria-current="page"{% endif %}>
+      Customer checkout
+    </a>
+  </nav>
+{% endblock %}

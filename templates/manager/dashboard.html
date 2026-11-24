@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}{{ business_name }} Manager{% endblock %}
+{% block content %}
+  <section class="manager-heading">
+    <p class="manager-kicker">Manager dashboard</p>
+    <h2>{{ business_name }}</h2>
+  </section>
+
+  {% for category, message in messages %}
+    <p class="manager-message {{ category }}" role="status">{{ message }}</p>
+  {% endfor %}
+
+  <nav class="manager-tabs" aria-label="Manager sections">
+    <a href="{{ url_for('manager_dashboard', tab='rentals') }}" {% if active_tab == 'rentals' %}aria-current="page"{% endif %}>
+      {{ business_name }} Rentals
+    </a>
+    <a href="{{ url_for('manager_dashboard', tab='business') }}" {% if active_tab == 'business' %}aria-current="page"{% endif %}>
+      {{ business_name }} data
+    </a>
+    <a href="{{ url_for('manager_dashboard', tab='checkout') }}" {% if active_tab == 'checkout' %}aria-current="page"{% endif %}>
+      Customer checkout
+    </a>
+    <a href="{{ url_for('manager_dashboard', tab='equipment') }}" {% if active_tab == 'equipment' %}aria-current="page"{% endif %}>
+      Update equipment
+    </a>
+  </nav>
+
+  {% if active_tab == 'equipment' %}
+    <section class="manager-panel">
+      <div class="manager-panel-heading">
+        <div>
+          <h2>Update equipment</h2>
+          <p>Manage the active inventory for {{ business_name }}.</p>
+        </div>
+      </div>
+
+      <details class="equipment-add-panel">
+        <summary class="button">Add equipment</summary>
+        <form class="equipment-form equipment-add-form" action="{{ url_for('manager_add_equipment') }}" method="post" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <label>Equipment name
+            <input name="equipment_type" type="text" maxlength="60" required>
+          </label>
+          <label>Description
+            <textarea name="description" maxlength="255" rows="3" required></textarea>
+          </label>
+          <div class="equipment-form-row">
+            <label>Rate
+              <input name="rate" type="number" min="0.01" max="99999999.99" step="0.01" required>
+            </label>
+            <label>Rate unit
+              <select name="rate_unit" required>
+                <option value="HOUR">Per hour</option>
+                <option value="DAY">Per day</option>
+              </select>
+            </label>
+            <label>Status
+              <select name="status" required>
+                <option value="AVAILABLE">Available</option>
+                <option value="MAINTENANCE">Maintenance</option>
+              </select>
+            </label>
+          </div>
+          <label>Equipment photo (JPG, up to 8 MB)
+            <input name="image" type="file" accept=".jpg,.jpeg,image/jpeg" required>
+          </label>
+          <button class="button button-primary" type="submit">Add to inventory</button>
+        </form>
+      </details>
+
+      {% if equipment %}
+        <div class="manager-equipment-grid">
+          {% for item in equipment %}
+            <article class="manager-equipment-card">
+              <img src="{{ item.image_url|rental_image }}" alt="{{ item.equipment_type }}">
+              <div class="equipment-card-heading">
+                <h3>{{ item.equipment_type }}</h3>
+                <span class="equipment-status-badge {{ item.status|lower }}">{{ item.status|replace('_', ' ')|title }}</span>
+              </div>
+              <form class="equipment-form" action="{{ url_for('manager_update_equipment', equipment_id=item.equipment_id) }}" method="post" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <label>Equipment name
+                  <input name="equipment_type" type="text" maxlength="60" value="{{ item.equipment_type }}" required>
+                </label>
+                <label>Description
+                  <textarea name="description" maxlength="255" rows="3" required>{{ item.description }}</textarea>
+                </label>
+                <div class="equipment-form-row">
+                  <label>Rate
+                    <input name="rate" type="number" min="0.01" max="99999999.99" step="0.01" value="{{ item.rate }}" required>
+                  </label>
+                  <label>Rate unit
+                    <select name="rate_unit" required>
+                      <option value="HOUR" {% if item.rate_unit == 'HOUR' %}selected{% endif %}>Per hour</option>
+                      <option value="DAY" {% if item.rate_unit == 'DAY' %}selected{% endif %}>Per day</option>
+                    </select>
+                  </label>
+                </div>
+                <label>Status
+                  <select name="status" required>
+                    <option value="AVAILABLE" {% if item.status == 'AVAILABLE' %}selected{% endif %}>Available</option>
+                    <option value="MAINTENANCE" {% if item.status == 'MAINTENANCE' %}selected{% endif %}>Maintenance</option>
+                  </select>
+                </label>
+                <label>Replace photo (optional JPG)
+                  <input name="image" type="file" accept=".jpg,.jpeg,image/jpeg">
+                </label>
+                <button class="button button-primary" type="submit">Save changes</button>
+              </form>
+              <form class="equipment-remove-form" action="{{ url_for('manager_delete_equipment', equipment_id=item.equipment_id) }}" method="post" onsubmit="return confirm('Remove this equipment from active inventory? Rental history will be preserved.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="button button-danger" type="submit">Remove equipment</button>
+              </form>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="manager-empty">No active equipment yet. Add equipment to start building your inventory.</p>
+      {% endif %}
+    </section>
+  {% endif %}
+{% endblock %}

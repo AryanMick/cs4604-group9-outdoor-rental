@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 import math
 import secrets
+from pathlib import Path
 
 from flask import Flask, abort, flash, get_flashed_messages, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -12,6 +13,7 @@ import pymysql
 import db_tools
 import customer_routes
 import customer_service
+import manager_service
 import table_actions
 
 app = Flask(__name__)
@@ -22,6 +24,7 @@ app.register_blueprint(customer_routes.bp)
 VIEWS = ("reservation_details", "employee_details")
 CHOICES = (*db_tools.TABLES, *VIEWS)
 ROWS_PER_PAGE = 20
+app.config["MAX_CONTENT_LENGTH"] = manager_service.MAX_JPEG_BYTES + 128 * 1024
 
 def is_logged_in() -> bool:
     return session.get("role") in {"customer", "employee", "manager", "admin"}
@@ -89,7 +92,8 @@ def read_database(table: str | None = None, page: int = 1) -> dict:
 
             counts = {}
             for name in db_tools.TABLES:
-                cursor.execute(f"SELECT COUNT(*) FROM `{name}`")
+                count_filter = " WHERE status <> 'RETIRED'" if name == "rental_equipment" and is_staff() else ""
+                cursor.execute(f"SELECT COUNT(*) FROM `{name}`{count_filter}")
                 counts[name] = cursor.fetchone()[0]
 
             result = {
@@ -105,13 +109,15 @@ def read_database(table: str | None = None, page: int = 1) -> dict:
             }
 
             if table is not None:
-                cursor.execute(f"SELECT COUNT(*) FROM `{table}`")
+                staff_equipment_filter = table == "rental_equipment" and is_staff()
+                where_clause = " WHERE status <> 'RETIRED'" if staff_equipment_filter else ""
+                cursor.execute(f"SELECT COUNT(*) FROM `{table}`{where_clause}")
                 row_count = cursor.fetchone()[0]
                 total_pages = max(1, math.ceil(row_count / ROWS_PER_PAGE))
                 page = min(max(page, 1), total_pages)
                 offset = (page - 1) * ROWS_PER_PAGE
                 cursor.execute(
-                    f"SELECT * FROM `{table}` ORDER BY 1, 2 LIMIT %s OFFSET %s",
+                    f"SELECT * FROM `{table}`{where_clause} ORDER BY 1, 2 LIMIT %s OFFSET %s",
                     (ROWS_PER_PAGE, offset),
                 )
                 result.update(
@@ -131,8 +137,14 @@ def read_database(table: str | None = None, page: int = 1) -> dict:
 
 @app.route("/")
 def dashboard():
+    if not is_logged_in():
+        return redirect(url_for("login"))
     if is_customer():
         return redirect(url_for("customer.select_business"))
+    if is_manager():
+        return redirect(url_for("manager_dashboard"))
+    if is_employee():
+        return redirect(url_for("employee_dashboard"))
     try:
         data = read_database()
         return render_template("index.html", choices=CHOICES, error=None, **data)
@@ -148,6 +160,149 @@ def dashboard():
             ),
             503,
         )
+
+
+@app.route("/manager")
+def manager_dashboard():
+    deny_unless_manager()
+    business_id = session.get("business_id")
+    if not isinstance(business_id, int):
+        abort(403)
+    tab = request.args.get("tab", "rentals")
+    if tab not in {"rentals", "business", "checkout", "equipment"}:
+        abort(404)
+    try:
+        business_name = manager_service.get_business_name(business_id)
+        if business_name is None:
+            abort(404)
+        equipment = manager_service.list_equipment(business_id) if tab == "equipment" else []
+        return render_template(
+            "manager/dashboard.html", business_name=business_name, active_tab=tab, equipment=equipment,
+        )
+    except (RuntimeError, pymysql.MySQLError):
+        app.logger.exception("Manager dashboard database failure")
+        flash("Unable to load your business dashboard. Check the database connection and try again.", "error")
+        return render_template(
+            "manager/dashboard.html", business_name="My Business", active_tab=tab, equipment=[],
+        ), 503
+
+
+@app.route("/employee")
+def employee_dashboard():
+    deny_unless_employee()
+    business_id = session.get("business_id")
+    if not isinstance(business_id, int):
+        abort(403)
+    tab = request.args.get("tab", "rentals")
+    if tab not in {"rentals", "checkout"}:
+        abort(404)
+    try:
+        business_name = manager_service.get_business_name(business_id)
+        if business_name is None:
+            abort(404)
+        return render_template(
+            "employee/dashboard.html", business_name=business_name, active_tab=tab,
+        )
+    except (RuntimeError, pymysql.MySQLError):
+        app.logger.exception("Employee dashboard database failure")
+        flash("Unable to load your business dashboard. Check the database connection and try again.", "error")
+        return render_template(
+            "employee/dashboard.html", business_name="My Business", active_tab=tab,
+        ), 503
+
+
+def _manager_equipment_redirect():
+    return redirect(url_for("manager_dashboard", tab="equipment"))
+
+
+def _manager_business_id() -> int:
+    business_id = session.get("business_id")
+    if not isinstance(business_id, int):
+        abort(403)
+    return business_id
+
+
+def _manager_image_upload() -> tuple[str | None, bytes | None]:
+    image = request.files.get("image")
+    if image is None or not image.filename:
+        return None, None
+    return image.filename, image.stream.read(manager_service.MAX_JPEG_BYTES + 1)
+
+
+@app.route("/manager/equipment/add", methods=["POST"])
+def manager_add_equipment():
+    deny_unless_manager()
+    token = session.get("csrf_token")
+    if not token or not secrets.compare_digest(token, request.form.get("csrf_token", "")):
+        abort(400)
+    filename, content = _manager_image_upload()
+    if filename is None:
+        flash("Choose a JPG image for this equipment.", "error")
+        return _manager_equipment_redirect()
+    try:
+        manager_service.create_equipment(
+            _manager_business_id(),
+            request.form.get("equipment_type", ""),
+            request.form.get("description", ""),
+            request.form.get("rate", ""),
+            request.form.get("rate_unit", ""),
+            request.form.get("status", "AVAILABLE"),
+            filename,
+            content,
+            Path(app.static_folder) / "img",
+        )
+        flash("Equipment added to your business.", "success")
+    except manager_service.ManagerEquipmentError as exc:
+        flash(str(exc), "error")
+    except (RuntimeError, OSError, pymysql.MySQLError):
+        app.logger.exception("Manager equipment creation failed")
+        flash("Unable to add equipment. Check the database and image file, then try again.", "error")
+    return _manager_equipment_redirect()
+
+
+@app.route("/manager/equipment/<int:equipment_id>/update", methods=["POST"])
+def manager_update_equipment(equipment_id: int):
+    deny_unless_manager()
+    token = session.get("csrf_token")
+    if not token or not secrets.compare_digest(token, request.form.get("csrf_token", "")):
+        abort(400)
+    filename, content = _manager_image_upload()
+    try:
+        manager_service.update_equipment(
+            _manager_business_id(), equipment_id,
+            request.form.get("equipment_type", ""),
+            request.form.get("description", ""),
+            request.form.get("rate", ""),
+            request.form.get("rate_unit", ""),
+            request.form.get("status", ""),
+            filename, content, Path(app.static_folder) / "img",
+        )
+        flash("Equipment details updated.", "success")
+    except manager_service.ManagerEquipmentError as exc:
+        flash(str(exc), "error")
+    except (RuntimeError, OSError, pymysql.MySQLError):
+        app.logger.exception("Manager equipment update failed")
+        flash("Unable to update equipment. Check the database and image file, then try again.", "error")
+    return _manager_equipment_redirect()
+
+
+@app.route("/manager/equipment/<int:equipment_id>/delete", methods=["POST"])
+def manager_delete_equipment(equipment_id: int):
+    deny_unless_manager()
+    token = session.get("csrf_token")
+    if not token or not secrets.compare_digest(token, request.form.get("csrf_token", "")):
+        abort(400)
+    try:
+        manager_service.retire_equipment(
+            _manager_business_id(), equipment_id, Path(app.static_folder) / "img",
+        )
+        flash("Equipment removed from your active business inventory. Rental history was preserved.", "success")
+    except manager_service.ManagerEquipmentError as exc:
+        flash(str(exc), "error")
+    except (RuntimeError, OSError, pymysql.MySQLError):
+        app.logger.exception("Manager equipment removal failed")
+        flash("Unable to remove equipment. Check the database connection and try again.", "error")
+    return _manager_equipment_redirect()
 
 
 @app.route("/go")

@@ -100,7 +100,7 @@ def _check_item(cursor, equipment_id: int, start: datetime, end: datetime, now: 
     validate_window(row[1], row[0], start, end, now)
     cursor.execute(
         "SELECT COUNT(*) FROM reservation WHERE equipment_id=%s AND status='RESERVED' "
-        "AND checkout_date < %s AND due_date > %s" + (" FOR SHARE" if lock else ""),
+        "AND checkout_date < %s AND due_date > %s",
         (equipment_id, end, start),
     )
     if cursor.fetchone()[0]:
@@ -360,7 +360,7 @@ def add_to_cart(cart_id: int, customer_id: int, equipment_id: int, start_text: s
             )
             if cursor.fetchone():
                 raise BookingError("This equipment is already in your cart.")
-            _check_item(cursor, equipment_id, start, end, current_time())
+            _check_item(cursor, equipment_id, start, end, current_time(), lock=True)
             cursor.execute(
                 "INSERT INTO cart_item (cart_id, equipment_id, start_at, end_at) VALUES (%s, %s, %s, %s)",
                 (cart_id, equipment_id, start, end),

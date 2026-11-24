@@ -4,7 +4,7 @@
   <section class="auth-shell">
     <div class="auth-card">
       <h2>Sign in</h2>
-      <p class="auth-intro">Login with either a customer, staff, or admin account.</p>
+      <p class="auth-intro">Sign in with a customer, employee, manager, or admin account.</p>
 
       {% for category, message in messages %}
         <div class="auth-message {{ category }}" role="alert">{{ message }}</div>
@@ -20,8 +20,6 @@
 
         <button class="auth-submit" type="submit">Sign in</button>
       </form>
-
-      <p class="auth-footer"><a href="{{ url_for('dashboard') }}">Return to dashboard</a></p>
     </div>
   </section>
 {% endblock %}

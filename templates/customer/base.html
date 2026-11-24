@@ -19,7 +19,7 @@
         <a href="{{ url_for('profile') }}">My Profile</a>
         <form action="{{ url_for('logout') }}" method="post">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <button class="button button-danger" type="submit">Log out</button>
+          <button class="button button-danger customer-logout" type="submit">Log out</button>
         </form>
       {% else %}
         <a href="{{ url_for('dashboard') }}">Dashboard</a>
