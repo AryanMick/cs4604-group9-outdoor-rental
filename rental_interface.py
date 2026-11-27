@@ -655,7 +655,10 @@ def profile():
         connection.close()
 
     if profile_data is None:
-        abort(404)
+        # The account was deleted while this session was still signed in.
+        session.clear()
+        flash("This account no longer exists. Please sign in again.", "error")
+        return redirect(url_for("login"))
 
     return render_template("auth/profile.html", profile=profile_data)
 
