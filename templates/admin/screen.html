@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="views">
+    <h2>{{ title }}</h2>
+    <p><a href="{{ url_for('dashboard') }}">&larr; Admin home</a></p>
+    <p class="muted">{{ description }}</p>
+    {% if screen %}
+      {% set s = sections[0] %}
+      <p class="muted">{{ s.rows|length }} record{{ '' if s.rows|length == 1 else 's' }}</p>
+      {% if s.rows %}
+        <div class="table-wrap">
+          <table>
+            <thead><tr>{% for h in s.headers %}<th>{{ h }}</th>{% endfor %}</tr></thead>
+            <tbody>
+              {% for row in s.rows %}<tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>{% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="manager-empty">Nothing to show yet.</p>
+      {% endif %}
+    {% else %}
+      {% include "_report_sections.html" %}
+    {% endif %}
+  </section>
+{% endblock %}

@@ -91,3 +91,8 @@ Keep `db_config.json` and `.venv` on your computer only
 - `templates/` and `static/` — HTML, CSS, and JavaScript (`static/vendor/flatpickr` is the calendar library)
 - `tests/` — unit tests: `python -m unittest discover tests`
 - `requirements.txt` — Python packages
+
+## Reports and admin screens
+
+Every user type has at least five labelled statistical reports (customer: My statistics on My Rentals; employee and manager: Business data tab; admin: Reports & statistics). Together they use COUNT, SUM, AVG, MIN and MAX. The admin home is task-oriented (add business/manager/employee/admin, look up records by name, reports); raw table editing is under Edit data.
+

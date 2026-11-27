@@ -21,7 +21,7 @@ EMPTY_REPORT = {
 def _patch_staff_data():
     return (
         patch.object(staff_service, "list_rentals", return_value=[]),
-        patch.object(reports, "business_report", return_value=EMPTY_REPORT),
+        patch.object(reports, "report_set", return_value=[]),
         patch.object(staff_service, "checkout_options", return_value={"customers": [], "equipment": []}),
     )
 
@@ -175,6 +175,23 @@ class EmployeeDashboardTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Summit Rentals data", response.data)
         self.assertIn(b'href="/employee?tab=business" aria-current="page"', response.data)
+
+
+class AdminScreenTests(unittest.TestCase):
+    def setUp(self):
+        self.client = app.test_client()
+
+    def test_admin_screens_require_admin_and_render_named_rows(self):
+        with self.client.session_transaction() as session:
+            session.update(role="manager", business_id=3)
+        self.assertEqual(self.client.get("/admin/view/customers").status_code, 403)
+        with self.client.session_transaction() as session:
+            session.update(role="admin")
+        data = {"key": "customers", "title": "Customers", "description": "d", "headers": ["Customer"], "rows": [["Ada Lovelace"]]}
+        with patch.object(rental_interface.admin_views, "run_screen", return_value=data):
+            response = self.client.get("/admin/view/customers")
+        self.assertIn(b"Ada Lovelace", response.data)
+        self.assertEqual(self.client.get("/admin/view/nope").status_code, 404)
 
 
 class StaffAndAdminActionTests(unittest.TestCase):

@@ -12,95 +12,36 @@
   {% if logged_in %}
     <section class="section-heading">
       <div>
-        <h2>Live row counts</h2>
-        <p>All {{ base_tables|length }} base tables · {{ total_rows }} total records</p>
+        <h2>Administration</h2>
+        <p>Choose a task. Records are shown by name.</p>
       </div>
     </section>
 
     <div class="count-grid">
-      {% for name in base_tables %}
-        <a class="count-card" href="{{ url_for('show_table', table=name) }}">
-          <span>{{ name }}</span>
-          <strong>{{ counts.get(name, "—") }}</strong>
-          <small>rows</small>
-        </a>
-      {% endfor %}
+      <a class="count-card" href="{{ url_for('new_business') }}"><span>Add a business</span><small>Create a business and its manager</small></a>
+      <a class="count-card" href="{{ url_for('new_manager') }}"><span>Add a manager</span><small>Assign to a business</small></a>
+      <a class="count-card" href="{{ url_for('new_employee') }}"><span>Add an employee</span><small>Assign to a manager</small></a>
+      <a class="count-card" href="{{ url_for('new_admin') }}"><span>Add an administrator</span><small>Create another admin login</small></a>
+      <a class="count-card" href="{{ url_for('profile') }}"><span>My account</span><small>Change my password</small></a>
     </div>
 
     <section class="views">
-      <h2>Joined views</h2>
-      <a href="{{ url_for('show_table', table='reservation_details') }}">reservation_details</a>
-      <a href="{{ url_for('show_table', table='employee_details') }}">employee_details</a>
+      <h2>Look up</h2>
+      <a href="{{ url_for('admin_screen', screen='businesses') }}">Businesses</a>
+      <a href="{{ url_for('admin_screen', screen='customers') }}">Customers</a>
+      <a href="{{ url_for('admin_screen', screen='staff') }}">Managers &amp; employees</a>
+      <a href="{{ url_for('admin_screen', screen='admins') }}">Administrators</a>
+      <a href="{{ url_for('admin_screen', screen='equipment') }}">Equipment</a>
+      <a href="{{ url_for('admin_screen', screen='reservations') }}">Reservations</a>
+      <a href="{{ url_for('admin_screen', screen='payments') }}">Payments</a>
+      <a href="{{ url_for('admin_reports') }}">Reports &amp; statistics</a>
     </section>
 
-    {% if report %}
-      <section class="views">
-        <h2>System aggregates</h2>
-        <div class="count-grid">
-          <div class="count-card"><span>Businesses</span><strong>{{ report.totals.businesses }}</strong></div>
-          <div class="count-card"><span>Customers</span><strong>{{ report.totals.customers }}</strong></div>
-          <div class="count-card"><span>Reservations</span><strong>{{ report.totals.reservations }}</strong></div>
-          <div class="count-card"><span>Payments</span><strong>{{ report.totals.payments }}</strong></div>
-          <div class="count-card"><span>Total revenue</span><strong>${{ '%.2f'|format(report.totals.revenue) }}</strong></div>
-          <div class="count-card"><span>Average payment</span><strong>${{ '%.2f'|format(report.totals.average_payment) }}</strong></div>
-          <div class="count-card"><span>Largest payment</span><strong>${{ '%.2f'|format(report.totals.largest_payment) }}</strong></div>
-        </div>
-
-        <h3>Revenue by business</h3>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Business</th><th>Equipment</th><th>Reservations</th><th>Est. revenue</th></tr></thead>
-            <tbody>
-              {% for b in report.by_business %}
-                <tr><td>{{ b.business_name }}</td><td>{{ b.equipment }}</td><td>{{ b.reservations }}</td><td>${{ '%.2f'|format(b.revenue) }}</td></tr>
-              {% else %}
-                <tr><td class="empty" colspan="4">No businesses yet.</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-
-        <h3>Reservations by status</h3>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Status</th><th>Reservations</th></tr></thead>
-            <tbody>
-              {% for s in report.by_status %}
-                <tr><td>{{ s.status }}</td><td>{{ s.reservations }}</td></tr>
-              {% else %}
-                <tr><td class="empty" colspan="2">No reservations yet.</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-
-        <h3>Most-rented equipment</h3>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Equipment</th><th>Business</th><th>Reservations</th></tr></thead>
-            <tbody>
-              {% for e in report.top_equipment %}
-                <tr><td>{{ e.equipment_type }}</td><td>{{ e.business_name }}</td><td>{{ e.reservations }}</td></tr>
-              {% else %}
-                <tr><td class="empty" colspan="3">No reservations yet.</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-
-        <h3>Staff per business</h3>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Business</th><th>Managers</th><th>Employees</th></tr></thead>
-            <tbody>
-              {% for s in report.staff %}
-                <tr><td>{{ s.business_name }}</td><td>{{ s.managers }}</td><td>{{ s.employees }}</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </section>
-    {% endif %}
+    <section class="views">
+      <h2>Edit data</h2>
+      <p class="muted">Add, change or remove records in a specific database table ({{ total_rows }} records in total).</p>
+      {% for name in base_tables %}<a href="{{ url_for('show_table', table=name) }}">{{ name|replace('_', ' ')|title }}</a>{% endfor %}
+    </section>
   {% else %}
     <p>Please log in</p>
   {% endif %}

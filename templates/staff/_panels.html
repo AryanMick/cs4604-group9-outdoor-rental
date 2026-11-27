@@ -50,27 +50,11 @@
     <div class="manager-panel-heading">
       <div>
         <h2>{{ business_name }} data</h2>
-        <p>Aggregate figures excluding cancelled reservations. Costs use current equipment rates.</p>
+        <p>Statistical reports (COUNT, SUM, AVG, MIN, MAX). Cancelled reservations are excluded; costs use current equipment rates.</p>
       </div>
     </div>
-    <div class="count-grid">
-      <div class="count-card"><span>Reservations</span><strong>{{ report.totals.reservations }}</strong></div>
-      <div class="count-card"><span>Customers served</span><strong>{{ report.totals.customers }}</strong></div>
-      <div class="count-card"><span>Total revenue</span><strong>${{ '%.2f'|format(report.totals.revenue) }}</strong></div>
-      <div class="count-card"><span>Average rental</span><strong>${{ '%.2f'|format(report.totals.average_rental) }}</strong></div>
-    </div>
-    <h3>Reservations by status</h3>
-    {% set rows = [] %}
-    {% for s in report.by_status %}{% set _ = rows.append([s.status, s.reservations]) %}{% endfor %}
-    {{ report_table(['Status', 'Reservations'], rows, 'No reservations yet.') }}
-    <h3>Equipment performance</h3>
-    {% set rows = [] %}
-    {% for e in report.by_equipment %}{% set _ = rows.append([e.equipment_type, e.reservations, '$%.2f'|format(e.revenue), '%.1f'|format(e.average_hours)]) %}{% endfor %}
-    {{ report_table(['Equipment', 'Reservations', 'Revenue', 'Avg. hours'], rows, 'No equipment yet.') }}
-    <h3>Top customers</h3>
-    {% set rows = [] %}
-    {% for c in report.top_customers %}{% set _ = rows.append([c.customer, c.reservations, '$%.2f'|format(c.spent)]) %}{% endfor %}
-    {{ report_table(['Customer', 'Reservations', 'Spent'], rows, 'No customers yet.') }}
+    {% set sections = sections|default([]) %}
+    {% include "_report_sections.html" %}
   </section>
 {% elif active_tab == 'checkout' %}
   <section class="manager-panel">
@@ -86,7 +70,7 @@
         <label>Customer
           <select name="customer_id" required>
             <option value="">Choose a customer</option>
-            {% for c in options.customers %}<option value="{{ c.customer_id }}">{{ c.name }} (#{{ c.customer_id }})</option>{% endfor %}
+            {% for c in options.customers %}<option value="{{ c.customer_id }}">{{ c.name }}</option>{% endfor %}
           </select>
         </label>
         <label>Equipment

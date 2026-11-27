@@ -91,10 +91,12 @@ def rentals():
     sections = customer_service.get_customer_rentals(session["customer_id"])
     try:
         report = reports.customer_report(session["customer_id"])
+        report_sections = reports.report_set("customer", session["customer_id"])
     except (RuntimeError, pymysql.MySQLError):
         current_app.logger.exception("Customer aggregate report failed")
         report = None
-    return render_template("customer/rentals.html", sections=sections, report=report)
+        report_sections = []
+    return render_template("customer/rentals.html", sections=sections, report=report, report_sections=report_sections)
 
 
 @bp.route("/shop")

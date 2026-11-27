@@ -10,6 +10,7 @@ from flask import Flask, abort, flash, get_flashed_messages, redirect, render_te
 from werkzeug.security import check_password_hash, generate_password_hash
 import pymysql
 
+import admin_views
 import db_tools
 import customer_routes
 import customer_service
@@ -170,10 +171,37 @@ def _staff_panel_data(tab: str, business_id: int) -> dict:
     if tab == "rentals":
         return {"rentals": staff_service.list_rentals(business_id)}
     if tab == "business":
-        return {"report": reports.business_report(business_id)}
+        kind = "manager" if is_manager() else "employee"
+        return {"sections": reports.report_set(kind, business_id)}
     if tab == "checkout":
         return {"options": staff_service.checkout_options(business_id)}
     return {}
+
+
+@app.route("/admin/reports")
+def admin_reports():
+    deny_unless_admin()
+    try:
+        return render_template("admin/screen.html", title="System reports",
+                               description="Overall statistics for the whole system.",
+                               sections=reports.report_set("admin"), screen=None)
+    except (RuntimeError, pymysql.MySQLError):
+        app.logger.exception("Admin reports failed")
+        abort(503)
+
+
+@app.route("/admin/view/<screen>")
+def admin_screen(screen: str):
+    deny_unless_admin()
+    if screen not in admin_views.SCREENS:
+        abort(404)
+    try:
+        data = admin_views.run_screen(screen)
+    except (RuntimeError, pymysql.MySQLError):
+        app.logger.exception("Admin screen failed")
+        abort(503)
+    return render_template("admin/screen.html", title=data["title"], description=data["description"],
+                           sections=[data], screen=screen)
 
 
 @app.route("/manager")

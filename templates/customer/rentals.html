@@ -26,6 +26,12 @@
       {% endif %}
     </section>
   {% endif %}
+  {% if report_sections %}
+    <section class="rental-section" aria-labelledby="reports-title">
+      <h2 id="reports-title">My statistics</h2>
+      {% with sections=report_sections %}{% include "_report_sections.html" %}{% endwith %}
+    </section>
+  {% endif %}
   {% for key, title, empty in [
     ('pending', 'Pending Pickup', 'You have no reservations awaiting pickup.'),
     ('active', 'Active Rentals', 'You have no active rentals.'),
