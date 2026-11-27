@@ -4,59 +4,68 @@ erDiagram
     MANAGER ||--o{ EMPLOYEE : supervises
     CUSTOMER ||--o{ RESERVATION : makes
     RENTAL_EQUIPMENT ||--o{ RESERVATION : reserved_in
-    RESERVATION ||--o| PAYMENT : receives
+    PAYMENT ||--o{ RESERVATION : covers
+    CUSTOMER ||--o| CART : has
+    CART ||--o{ CART_ITEM : holds
+    RENTAL_EQUIPMENT ||--o{ CART_ITEM : added_as
     ADMIN ||--o{ DEFINES_ACCESS : assigns
     EMPLOYEE ||--o{ DEFINES_ACCESS : receives
     ADMIN ||--o{ ADMIN_PRIVILEGES : holds
+    CUSTOMER ||--o| AUTH_ACCOUNT : logs_in_as
+    EMPLOYEE ||--o| AUTH_ACCOUNT : logs_in_as
+    MANAGER ||--o| AUTH_ACCOUNT : logs_in_as
+    ADMIN ||--o| AUTH_ACCOUNT : logs_in_as
     BUSINESS {
-        int_auto_increment business_id PK
-        varchar_120 business_name
-        varchar_255 address
+        int business_id PK
+        varchar business_name
+        varchar address
     }
     RENTAL_EQUIPMENT {
-        int_auto_increment equipment_id PK
-        varchar_60 equipment_type
-        varchar_20 status
+        int equipment_id PK
+        varchar equipment_type
+        varchar description
+        decimal rate
+        varchar rate_unit "HOUR or DAY"
+        varchar image_url
+        varchar status
         int business_id FK
     }
     CUSTOMER {
-        int_auto_increment customer_id PK
-        varchar_80 first_name
-        varchar_80 last_name
-        varchar_254 email UK
-    }
-    RESERVATION {
-        int_auto_increment reservation_id PK
-        int equipment_id FK
-        int customer_id FK
-        varchar_20 status
-        date checkout_date
-        date due_date
+        int customer_id PK
+        varchar first_name
+        varchar last_name
     }
     PAYMENT {
-        int_auto_increment payment_id PK
-        int reservation_id FK, UK
-        decimal_10_2 amount
-        date payment_date
+        int payment_id PK
+        decimal amount
+        datetime payment_date
+        char card_last4
+    }
+    RESERVATION {
+        int reservation_id PK
+        int equipment_id FK
+        int customer_id FK
+        int payment_id FK "nullable"
+        varchar status
+        datetime checkout_date
+        datetime due_date
     }
     MANAGER {
-        int_auto_increment manager_id PK
-        varchar_80 first_name
-        varchar_80 last_name
-        varchar_254 email UK
+        int manager_id PK
+        varchar first_name
+        varchar last_name
         int business_id FK
     }
     EMPLOYEE {
-        int_auto_increment employee_id PK
-        varchar_80 first_name
-        varchar_80 last_name
-        varchar_254 email UK
+        int employee_id PK
+        varchar first_name
+        varchar last_name
         int manager_id FK
     }
     ADMIN {
-        int_auto_increment admin_id PK
-        varchar_80 first_name
-        varchar_80 last_name
+        int admin_id PK
+        varchar first_name
+        varchar last_name
     }
     DEFINES_ACCESS {
         int admin_id PK, FK
@@ -64,5 +73,27 @@ erDiagram
     }
     ADMIN_PRIVILEGES {
         int admin_id PK, FK
-        varchar_60 privilege PK
+        varchar privilege PK
+    }
+    AUTH_ACCOUNT {
+        int account_id PK
+        varchar email UK
+        varchar password_hash
+        varchar role
+        int customer_id FK, UK
+        int employee_id FK, UK
+        int manager_id FK, UK
+        int admin_id FK, UK
+    }
+    CART {
+        int cart_id PK
+        int customer_id FK, UK
+        datetime created_at
+    }
+    CART_ITEM {
+        int cart_item_id PK
+        int cart_id FK
+        int equipment_id FK
+        datetime start_at
+        datetime end_at
     }

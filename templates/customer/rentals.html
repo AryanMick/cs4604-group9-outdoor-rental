@@ -5,6 +5,27 @@
   <p class="muted">Your saved reservations across all rental businesses.</p>
   <p class="muted">Active Rentals are RESERVED items whose start time has arrived, including overdue items. Pickup is not tracked separately.</p>
   <p class="muted">Item costs are estimates using current equipment rates; saved payment totals cover the whole order, even if its items appear in different sections.</p>
+  {% if report %}
+    <section class="rental-section" aria-labelledby="summary-title">
+      <h2 id="summary-title">Your rental summary</h2>
+      <p>
+        {{ report.totals.reservations }} reservation{{ '' if report.totals.reservations == 1 else 's' }}
+        across {{ report.totals.payments }} payment{{ '' if report.totals.payments == 1 else 's' }}.
+        Total paid: {{ report.totals.total_spent|money }}
+        &middot; Average payment: {{ report.totals.average_payment|money }}.
+      </p>
+      {% if report.favorites %}
+        <p>Favorite equipment:
+          {% for f in report.favorites %}{{ f.equipment_type }} ({{ f.reservations }}){{ ', ' if not loop.last }}{% endfor %}
+        </p>
+      {% endif %}
+      {% if report.by_business %}
+        <p>Reservations by business:
+          {% for b in report.by_business %}{{ b.business_name }} ({{ b.reservations }}){{ ', ' if not loop.last }}{% endfor %}
+        </p>
+      {% endif %}
+    </section>
+  {% endif %}
   {% for key, title, empty in [
     ('pending', 'Pending Pickup', 'You have no reservations awaiting pickup.'),
     ('active', 'Active Rentals', 'You have no active rentals.'),

@@ -7,13 +7,31 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 import manager_service
+import reports
 import rental_interface
+import staff_service
 from rental_interface import app
+
+EMPTY_REPORT = {
+    "totals": {"reservations": 0, "customers": 0, "revenue": 0, "average_rental": 0},
+    "by_status": [], "by_equipment": [], "top_customers": [],
+}
+
+
+def _patch_staff_data():
+    return (
+        patch.object(staff_service, "list_rentals", return_value=[]),
+        patch.object(reports, "business_report", return_value=EMPTY_REPORT),
+        patch.object(staff_service, "checkout_options", return_value={"customers": [], "equipment": []}),
+    )
 
 
 class ManagerDashboardTests(unittest.TestCase):
     def setUp(self):
         self.client = app.test_client()
+        for staff_patch in _patch_staff_data():
+            staff_patch.start()
+            self.addCleanup(staff_patch.stop)
         with self.client.session_transaction() as session:
             session.update(role="manager", role_id=7, business_id=3, csrf_token="manager-token")
 
@@ -110,6 +128,9 @@ class ManagerDashboardTests(unittest.TestCase):
 class EmployeeDashboardTests(unittest.TestCase):
     def setUp(self):
         self.client = app.test_client()
+        for staff_patch in _patch_staff_data():
+            staff_patch.start()
+            self.addCleanup(staff_patch.stop)
 
     def test_employee_login_lands_on_business_rentals_tab(self):
         connection = MagicMock()
@@ -154,6 +175,38 @@ class EmployeeDashboardTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Summit Rentals data", response.data)
         self.assertIn(b'href="/employee?tab=business" aria-current="page"', response.data)
+
+
+class StaffAndAdminActionTests(unittest.TestCase):
+    def setUp(self):
+        self.client = app.test_client()
+
+    def test_staff_checkout_requires_staff_and_csrf_then_uses_session_business(self):
+        self.assertEqual(self.client.post("/staff/checkout").status_code, 401)
+        with self.client.session_transaction() as session:
+            session.update(role="employee", business_id=3, csrf_token="tok")
+        self.assertEqual(self.client.post("/staff/checkout", data={"csrf_token": "bad"}).status_code, 400)
+        form = {
+            "csrf_token": "tok", "customer_id": "5", "equipment_id": "9", "start": "2030-01-01T10:00",
+            "end": "2030-01-01T12:00", "card_number": "4111111111111111", "expiry": "2030-01", "security_code": "123",
+        }
+        result = {"equipment_type": "Kayak", "reservation_id": 1, "payment_id": 2, "total": "10.00"}
+        with patch.object(staff_service, "checkout_customer", return_value=result) as checkout:
+            response = self.client.post("/staff/checkout", data=form)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(checkout.call_args.args[:3], (3, "5", "9"))
+
+    def test_admin_update_route_passes_key_and_nulls_blank_values(self):
+        with self.client.session_transaction() as session:
+            session.update(role="admin", csrf_token="tok")
+        form = {"csrf_token": "tok", "key_customer_id": "4", "first_name": "Ada", "last_name": " "}
+        with patch.object(rental_interface.table_actions, "update_record") as update:
+            response = self.client.post("/table/customer/update", data=form)
+        self.assertEqual(response.status_code, 302)
+        update.assert_called_once_with("customer", {"customer_id": "4"}, {"first_name": "Ada", "last_name": None})
+        with self.client.session_transaction() as session:
+            session["role"] = "manager"
+        self.assertEqual(self.client.post("/table/customer/update", data=form).status_code, 403)
 
 
 class ManagerEquipmentServiceTests(unittest.TestCase):

@@ -25,13 +25,16 @@ Stop with **Ctrl+C** and run the same command next time
 
 ## Use it
 
-- **Login** uses the email and password in `auth_account`; registration is not available yet
+- **Login** uses the email and password in `auth_account`; registration is not available yet. Roles are customer, employee, manager, and admin
 - Sample customer login: `alexcarter@gmail.com` with password `password`
 - Customers choose a business, add equipment to their own cart, and complete the practice checkout
 - On a business page, choose **Sort by** and click **Apply** to order equipment by name or listed rate
 - On the business selection page, search by equipment type, description, or business name. Equipment matches link to the matching items at that business; availability is checked when choosing rental dates.
-- Staff can view tables; admins can also add and delete records
+- **Employees and managers** get a dashboard with tabs: **Rentals** (reservations for their own business), **Business data** (aggregates: rentals by status, estimated revenue, top equipment) and **Customer checkout** (book a rental for a walk-in customer; a demonstration card payment, last 4 digits saved). Managers also manage equipment and staff.
+- **Admins** see system-wide aggregates (totals, revenue by business, status counts, top equipment, staff per business) on the home page, and can browse, add, edit, and delete records in every table
+- **Customers** see a personal rental summary at the top of **My Rentals**
 - To add a row as an admin, click **Add record**, fill in the required fields, then **Insert record**
+- To change a row, click **Edit** beside it, change the fields, then **Save changes**. Primary-key columns cannot be edited and blank fields are saved as NULL.
 - Use `YYYY-MM-DD HH:MM:SS` for date and time fields and existing IDs for related records
 - Click **Delete** beside a row and confirm — MySQL blocks deletion when another record depends on it
 - Checkout is a demonstration payment; only the last 4 card digits are saved

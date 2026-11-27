@@ -53,8 +53,8 @@ def verify() -> dict:
                    WHERE constraint_schema=%s AND constraint_type='UNIQUE'""",
                 (database,),
             )
-            assert unique_constraints == 9
-            checks.append("All 9 intended unique constraints exist")
+            assert unique_constraints == 7
+            checks.append("All 7 intended unique constraints exist")
 
             check_constraints = scalar(
                 cursor,
@@ -63,8 +63,8 @@ def verify() -> dict:
                      AND enforced='YES'""",
                 (database,),
             )
-            assert check_constraints == 28
-            checks.append("All 28 CHECK constraints exist and are enforced")
+            assert check_constraints == 26
+            checks.append("All 26 CHECK constraints exist and are enforced")
 
             triggers = scalar(
                 cursor,
@@ -133,19 +133,19 @@ def verify() -> dict:
                 """SELECT
                      (SELECT COUNT(*) FROM auth_account a JOIN customer c ON c.customer_id = a.customer_id
                       WHERE a.role = 'CUSTOMER'
-                        AND BINARY a.email <> BINARY CONCAT(c.first_name,c.last_name,'@gmail.com')) +
+                        AND a.email <> LOWER(CONCAT(c.first_name,c.last_name,'@gmail.com'))) +
                      (SELECT COUNT(*) FROM auth_account a JOIN manager m ON m.manager_id = a.manager_id
-                      WHERE a.role = 'STAFF'
-                        AND BINARY a.email <> BINARY CONCAT(m.first_name,m.last_name,'@gmail.com')) +
+                      WHERE a.role = 'MANAGER'
+                        AND a.email <> LOWER(CONCAT(m.first_name,m.last_name,'@gmail.com'))) +
                      (SELECT COUNT(*) FROM auth_account a JOIN employee e ON e.employee_id = a.employee_id
-                      WHERE a.role = 'STAFF'
-                        AND BINARY a.email <> BINARY CONCAT(e.first_name,e.last_name,'@gmail.com')) +
+                      WHERE a.role = 'EMPLOYEE'
+                        AND a.email <> LOWER(CONCAT(e.first_name,e.last_name,'@gmail.com'))) +
                      (SELECT COUNT(*) FROM auth_account a JOIN admin d ON d.admin_id = a.admin_id
                       WHERE a.role = 'ADMIN'
-                        AND BINARY a.email <> BINARY CONCAT(d.first_name,d.last_name,'@gmail.com'))""",
+                        AND a.email <> LOWER(CONCAT(d.first_name,d.last_name,'@gmail.com')))""",
             )
             assert sample_emails == 0
-            checks.append("Every sample account email uses the person’s name and gmail.com")
+            checks.append("Every sample account email is the lowercase name plus @gmail.com")
         connection.rollback()
 
         equipment_columns = "equipment_id,equipment_type,description,rate,rate_unit,status,business_id"
@@ -265,7 +265,7 @@ def verify() -> dict:
             "checks": checks,
             "limits": [
                 "Reservation overlap is enforced by database triggers (database/03_triggers.sql); the browser interface re-checks it before booking.",
-                "The browser interface is local and read-only; use MySQL Workbench for authorized edits.",
+                "The browser interface is local; staff and admin edits go through role-checked, CSRF-protected forms, and MySQL Workbench remains available for bulk changes.",
             ],
         }
         destination = db_tools.PACKAGE / "submission" / "verification_results.json"

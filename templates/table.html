@@ -44,6 +44,44 @@
       document.getElementById('add-row-btn').addEventListener('click', () => dialog.showModal());
       document.getElementById('insert-cancel').addEventListener('click', () => dialog.close());
     </script>
+    <dialog id="edit-dialog" class="insert-dialog">
+      <form action="{{ url_for('update_row', table=table) }}" method="post">
+        <h3>Edit a record in {{ table }}</h3>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="page" value="{{ page }}">
+        {% for column in columns %}
+          {% if column in primary_keys[table] %}
+            <label>{{ column }} (key, cannot be changed)
+              <input type="text" id="edit-{{ column }}" name="key_{{ column }}" readonly>
+            </label>
+          {% else %}
+            <label>{{ column }}{% if column in required_columns %} *{% endif %}
+              <input type="text" id="edit-{{ column }}" name="{{ column }}"
+                     {% if column in required_columns %}required{% else %}placeholder="leave blank for NULL"{% endif %}>
+            </label>
+          {% endif %}
+        {% endfor %}
+        <div class="dialog-actions">
+          <button type="submit">Save changes</button>
+          <button type="button" id="edit-cancel">Cancel</button>
+        </div>
+      </form>
+    </dialog>
+    <script>
+      const editDialog = document.getElementById('edit-dialog');
+      const columnNames = {{ columns|list|tojson }};
+      document.querySelectorAll('[data-edit-row]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const cells = button.closest('tr').querySelectorAll('td');
+          columnNames.forEach((name, index) => {
+            const text = cells[index].textContent.trim();
+            document.getElementById('edit-' + name).value = text === 'NULL' ? '' : text;
+          });
+          editDialog.showModal();
+        });
+      });
+      document.getElementById('edit-cancel').addEventListener('click', () => editDialog.close());
+    </script>
   {% endif %}
   <div class="table-wrap">
     {% if logged_in %}
@@ -62,6 +100,7 @@
               {% endfor %}
               {% if is_admin and table in primary_keys %}
                 <td>
+                  <button type="button" class="edit-button" data-edit-row>Edit</button>
                   <form action="{{ url_for('delete_row', table=table) }}" method="post"
                         onsubmit="return confirm('Delete this record? This cannot be undone.');">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

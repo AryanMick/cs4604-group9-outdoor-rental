@@ -14,6 +14,8 @@ import db_tools
 import customer_routes
 import customer_service
 import manager_service
+import reports
+import staff_service
 import table_actions
 
 app = Flask(__name__)
@@ -147,7 +149,8 @@ def dashboard():
         return redirect(url_for("employee_dashboard"))
     try:
         data = read_database()
-        return render_template("index.html", choices=CHOICES, error=None, **data)
+        report = reports.admin_report()
+        return render_template("index.html", choices=CHOICES, error=None, report=report, **data)
     except (RuntimeError, pymysql.MySQLError) as exc:
         return (
             render_template(
@@ -160,6 +163,17 @@ def dashboard():
             ),
             503,
         )
+
+
+def _staff_panel_data(tab: str, business_id: int) -> dict:
+    """Data for the rentals, business-data, and checkout tabs shared by managers and employees."""
+    if tab == "rentals":
+        return {"rentals": staff_service.list_rentals(business_id)}
+    if tab == "business":
+        return {"report": reports.business_report(business_id)}
+    if tab == "checkout":
+        return {"options": staff_service.checkout_options(business_id)}
+    return {}
 
 
 @app.route("/manager")
@@ -178,12 +192,13 @@ def manager_dashboard():
         equipment = manager_service.list_equipment(business_id) if tab == "equipment" else []
         return render_template(
             "manager/dashboard.html", business_name=business_name, active_tab=tab, equipment=equipment,
+            **_staff_panel_data(tab, business_id),
         )
     except (RuntimeError, pymysql.MySQLError):
         app.logger.exception("Manager dashboard database failure")
         flash("Unable to load your business dashboard. Check the database connection and try again.", "error")
         return render_template(
-            "manager/dashboard.html", business_name="My Business", active_tab=tab, equipment=[],
+            "manager/dashboard.html", business_name="My Business", active_tab="none", equipment=[],
         ), 503
 
 
@@ -202,13 +217,48 @@ def employee_dashboard():
             abort(404)
         return render_template(
             "employee/dashboard.html", business_name=business_name, active_tab=tab,
+            **_staff_panel_data(tab, business_id),
         )
     except (RuntimeError, pymysql.MySQLError):
         app.logger.exception("Employee dashboard database failure")
         flash("Unable to load your business dashboard. Check the database connection and try again.", "error")
         return render_template(
-            "employee/dashboard.html", business_name="My Business", active_tab=tab,
+            "employee/dashboard.html", business_name="My Business", active_tab="none",
         ), 503
+
+
+@app.route("/staff/checkout", methods=["POST"])
+def staff_checkout():
+    deny_unless_staff()
+    token = session.get("csrf_token")
+    if not token or not secrets.compare_digest(token, request.form.get("csrf_token", "")):
+        abort(400)
+    business_id = session.get("business_id")
+    if not isinstance(business_id, int):
+        abort(403)
+    try:
+        result = staff_service.checkout_customer(
+            business_id,
+            request.form.get("customer_id", ""),
+            request.form.get("equipment_id", ""),
+            request.form.get("start", ""),
+            request.form.get("end", ""),
+            request.form.get("card_number", ""),
+            request.form.get("expiry", ""),
+            request.form.get("security_code", ""),
+        )
+        flash(
+            f"Checked out {result['equipment_type']} (reservation #{result['reservation_id']}, "
+            f"payment #{result['payment_id']}, ${result['total']}).",
+            "success",
+        )
+    except customer_service.BookingError as exc:
+        flash(str(exc), "error")
+    except (RuntimeError, pymysql.MySQLError):
+        app.logger.exception("Staff checkout failed")
+        flash("Unable to complete the checkout. Check the database connection and try again.", "error")
+    endpoint = "manager_dashboard" if is_manager() else "employee_dashboard"
+    return redirect(url_for(endpoint, tab="checkout"))
 
 
 def _manager_equipment_redirect():
@@ -387,6 +437,32 @@ def insert_row(table: str):
     except (ValueError, RuntimeError, pymysql.MySQLError) as exc:
         flash(str(exc), "error")
     return redirect(url_for("show_table", table=table))
+
+
+@app.route("/table/<table>/update", methods=["POST"])
+def update_row(table: str):
+    deny_unless_admin()
+    if table not in table_actions.TABLE_PRIMARY_KEYS:
+        abort(404)
+    token = session.get("csrf_token")
+    if not token or not secrets.compare_digest(token, request.form.get("csrf_token", "")):
+        abort(400)
+    primary_keys = table_actions.TABLE_PRIMARY_KEYS[table]
+    key_values = {
+        name: request.form.get(f"key_{name}", "").strip() for name in primary_keys
+    }
+    # Blank fields are saved as NULL.
+    values = {
+        name: value.strip() if value.strip() != "" else None
+        for name, value in request.form.items()
+        if name != "csrf_token" and not name.startswith("key_")
+    }
+    try:
+        table_actions.update_record(table, key_values, values)
+        flash(f"Record updated in {table}.", "success")
+    except (ValueError, RuntimeError, pymysql.MySQLError) as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("show_table", table=table, page=request.form.get("page", 1, type=int)))
 
 
 @app.route("/table/<table>/delete", methods=["POST"])

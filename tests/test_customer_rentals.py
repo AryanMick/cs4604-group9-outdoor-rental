@@ -13,6 +13,7 @@ from werkzeug.security import generate_password_hash
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import customer_service as cs
+import reports
 import start
 from rental_interface import app
 
@@ -279,7 +280,8 @@ class CustomerPageTests(unittest.TestCase):
         cursor.fetchall.return_value = [
             (1, None, "RESERVED", None, None, None, None, None, None, None, None, None),
         ]
-        with patch.object(cs.db_tools, "connect", return_value=connection):
+        with patch.object(cs.db_tools, "connect", return_value=connection), \
+                patch.object(reports, "customer_report", return_value=None):
             response = self.client.get("/rentals")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Equipment unavailable", response.data)

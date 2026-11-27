@@ -1,0 +1,123 @@
+{% macro report_table(headers, rows, empty) %}
+  {% if rows %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr>{% for h in headers %}<th>{{ h }}</th>{% endfor %}</tr></thead>
+        <tbody>
+          {% for row in rows %}<tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="manager-empty">{{ empty }}</p>
+  {% endif %}
+{% endmacro %}
+
+{% if active_tab == 'rentals' %}
+  <section class="manager-panel">
+    <div class="manager-panel-heading">
+      <div>
+        <h2>{{ business_name }} rentals</h2>
+        <p>Every reservation for this business's equipment (latest {{ rentals|length }} shown).</p>
+      </div>
+    </div>
+    {% if rentals %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Customer</th><th>Equipment</th><th>Start</th><th>End</th><th>Status</th><th>Payment</th><th>Est. cost</th></tr></thead>
+          <tbody>
+            {% for r in rentals %}
+              <tr>
+                <td>{{ r.reservation_id }}</td>
+                <td>{{ r.customer }}</td>
+                <td>{{ r.equipment_type }}</td>
+                <td>{{ r.start_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>{{ r.end_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>{{ r.status }}{% if r.overdue %} (past due){% endif %}</td>
+                <td>{{ r.payment_id if r.payment_id is not none else '—' }}</td>
+                <td>${{ '%.2f'|format(r.price) }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="manager-empty">No reservations have been made for this business yet.</p>
+    {% endif %}
+  </section>
+{% elif active_tab == 'business' %}
+  <section class="manager-panel">
+    <div class="manager-panel-heading">
+      <div>
+        <h2>{{ business_name }} data</h2>
+        <p>Aggregate figures excluding cancelled reservations. Costs use current equipment rates.</p>
+      </div>
+    </div>
+    <div class="count-grid">
+      <div class="count-card"><span>Reservations</span><strong>{{ report.totals.reservations }}</strong></div>
+      <div class="count-card"><span>Customers served</span><strong>{{ report.totals.customers }}</strong></div>
+      <div class="count-card"><span>Total revenue</span><strong>${{ '%.2f'|format(report.totals.revenue) }}</strong></div>
+      <div class="count-card"><span>Average rental</span><strong>${{ '%.2f'|format(report.totals.average_rental) }}</strong></div>
+    </div>
+    <h3>Reservations by status</h3>
+    {% set rows = [] %}
+    {% for s in report.by_status %}{% set _ = rows.append([s.status, s.reservations]) %}{% endfor %}
+    {{ report_table(['Status', 'Reservations'], rows, 'No reservations yet.') }}
+    <h3>Equipment performance</h3>
+    {% set rows = [] %}
+    {% for e in report.by_equipment %}{% set _ = rows.append([e.equipment_type, e.reservations, '$%.2f'|format(e.revenue), '%.1f'|format(e.average_hours)]) %}{% endfor %}
+    {{ report_table(['Equipment', 'Reservations', 'Revenue', 'Avg. hours'], rows, 'No equipment yet.') }}
+    <h3>Top customers</h3>
+    {% set rows = [] %}
+    {% for c in report.top_customers %}{% set _ = rows.append([c.customer, c.reservations, '$%.2f'|format(c.spent)]) %}{% endfor %}
+    {{ report_table(['Customer', 'Reservations', 'Spent'], rows, 'No customers yet.') }}
+  </section>
+{% elif active_tab == 'checkout' %}
+  <section class="manager-panel">
+    <div class="manager-panel-heading">
+      <div>
+        <h2>Customer checkout</h2>
+        <p>Reserve and take payment for one item on behalf of a customer.</p>
+      </div>
+    </div>
+    {% if options.equipment %}
+      <form class="equipment-form" action="{{ url_for('staff_checkout') }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label>Customer
+          <select name="customer_id" required>
+            <option value="">Choose a customer</option>
+            {% for c in options.customers %}<option value="{{ c.customer_id }}">{{ c.name }} (#{{ c.customer_id }})</option>{% endfor %}
+          </select>
+        </label>
+        <label>Equipment
+          <select name="equipment_id" required>
+            <option value="">Choose equipment</option>
+            {% for e in options.equipment %}<option value="{{ e.equipment_id }}">{{ e.equipment_type }} — ${{ e.rate }}/{{ e.rate_unit|lower }}</option>{% endfor %}
+          </select>
+        </label>
+        <div class="equipment-form-row">
+          <label>Start (on the hour or half hour)
+            <input name="start" type="datetime-local" step="1800" required>
+          </label>
+          <label>End
+            <input name="end" type="datetime-local" step="1800" required>
+          </label>
+        </div>
+        <div class="equipment-form-row">
+          <label>Card number
+            <input name="card_number" type="text" inputmode="numeric" autocomplete="off" required>
+          </label>
+          <label>Expiration
+            <input name="expiry" type="month" required>
+          </label>
+          <label>Security code
+            <input name="security_code" type="text" inputmode="numeric" autocomplete="off" maxlength="4" required>
+          </label>
+        </div>
+        <button class="button button-primary" type="submit">Check out customer</button>
+      </form>
+    {% else %}
+      <p class="manager-empty">There is no available equipment to check out.</p>
+    {% endif %}
+  </section>
+{% endif %}

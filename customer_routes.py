@@ -11,6 +11,7 @@ from flask import (
 import pymysql
 
 import customer_service
+import reports
 from customer_service import BookingError
 
 bp = Blueprint("customer", __name__)
@@ -87,10 +88,13 @@ def login_customer():
 @bp.route("/rentals")
 @customer_view
 def rentals():
-    return render_template(
-        "customer/rentals.html",
-        sections=customer_service.get_customer_rentals(session["customer_id"]),
-    )
+    sections = customer_service.get_customer_rentals(session["customer_id"])
+    try:
+        report = reports.customer_report(session["customer_id"])
+    except (RuntimeError, pymysql.MySQLError):
+        current_app.logger.exception("Customer aggregate report failed")
+        report = None
+    return render_template("customer/rentals.html", sections=sections, report=report)
 
 
 @bp.route("/shop")

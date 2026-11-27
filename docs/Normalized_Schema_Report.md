@@ -4,114 +4,100 @@ CS4604 — Introduction to Database Systems
 Group 9  
 Aryan Bhowmick, Tanner Fitzgerald, John Hewitt II, Timothy Peace  
 Contact: johnh95@vt.edu  
-Schema revision: October 22, 2026
+Schema revision: final submission
 
 ## Project
 
-The database keeps track of outdoor rental businesses, equipment, customers, reservations, payments, and staff. It uses MySQL 8.4 with InnoDB tables. The local read-only browser interface is written in Python 3 with Flask and connects through PyMySQL.
+The database keeps track of outdoor rental businesses, equipment, customers, reservations, payments, staff, administrators, login accounts, and shopping carts. It uses MySQL 8.4 with InnoDB tables. The local browser interface is written in Python 3 with Flask and connects through PyMySQL. It has four roles: customers, employees, managers, and administrators.
 
-## Changes to the original schema
+## Changes from the original schema
 
-- Move the equipment reference into RESERVATION. One equipment item can then have several reservations over time.
-- Remove BusinessID from RESERVATION. The business is already identified by the equipment being rented.
-- Store reservation_id in PAYMENT and make it unique. A reservation can have no payment or one payment.
-- Remove BusinessID from EMPLOYEE. Each employee works for the business assigned to their manager.
-- Remove Man_ID from DEFINES_ACCESS. In this version, the manager means the employee's supervisor, so it is found through EMPLOYEE.
-- Give ADMIN_PRIVILEGES a composite primary key of admin_id and privilege. Each privilege goes in its own row.
+- Equipment is referenced from RESERVATION, so one item can have many reservations over time. BusinessID was removed from RESERVATION because the equipment already identifies the business.
+- PAYMENT no longer points at a reservation. RESERVATION has a nullable payment_id, so one payment can cover several reservations (a multi-item checkout) and a reservation can exist unpaid.
+- Equipment now has a description, a rate and rate unit (HOUR or DAY), and an image path.
+- Checkout, due, and payment times are DATETIME values on a 30-minute grid. Payments keep only the last four card digits.
+- Reservation status is RESERVED, RETURNED, or CANCELLED.
+- Email addresses and passwords moved out of CUSTOMER, MANAGER, and EMPLOYEE into one AUTH_ACCOUNT table that links to exactly one person row according to its role (CUSTOMER, EMPLOYEE, MANAGER, ADMIN).
+- CART and CART_ITEM were added for the customer checkout flow. A customer has at most one cart, and an item can appear in a cart once.
+- BusinessID was removed from EMPLOYEE (found through the manager) and Man_ID was removed from DEFINES_ACCESS (found through EMPLOYEE).
+- ADMIN_PRIVILEGES has a composite key of admin_id and privilege.
 
-The model assumes one equipment item per reservation and one assigned manager per employee. Managers and employees remain separate entity sets, following the original design. If a reservation must contain several items, it would need an extra reservation-item table. If the manager in DEFINES_ACCESS is meant to be someone other than the employee's supervisor, that access relationship would need to be changed.
+Assumptions: one manager per employee, and one manager per business is enough for the interface. A payment's amount is the total charged for its reservations; no per-reservation price is stored.
 
 ## Relational schema
 
 PK means primary key, FK means foreign key, and UQ means unique.
 
 ```text
-BUSINESS(
-  business_id PK, business_name, address
-)
+BUSINESS(business_id PK, business_name, address)
 
-RENTAL_EQUIPMENT(
-  equipment_id PK, equipment_type, status,
-  business_id FK -> BUSINESS
-)
+RENTAL_EQUIPMENT(equipment_id PK, equipment_type, description, rate, rate_unit,
+  image_url, status, business_id FK -> BUSINESS)
 
-CUSTOMER(
-  customer_id PK, first_name, last_name, email UQ
-)
+CUSTOMER(customer_id PK, first_name, last_name)
 
-RESERVATION(
-  reservation_id PK, equipment_id FK -> RENTAL_EQUIPMENT,
-  customer_id FK -> CUSTOMER, status, checkout_date, due_date
-)
+PAYMENT(payment_id PK, amount, payment_date, card_last4)
 
-PAYMENT(
-  payment_id PK, reservation_id FK/UQ -> RESERVATION,
-  amount, payment_date
-)
+RESERVATION(reservation_id PK, equipment_id FK -> RENTAL_EQUIPMENT,
+  customer_id FK -> CUSTOMER, payment_id FK -> PAYMENT NULL,
+  status, checkout_date, due_date)
 
-MANAGER(
-  manager_id PK, first_name, last_name, email UQ,
-  business_id FK -> BUSINESS
-)
+MANAGER(manager_id PK, first_name, last_name, business_id FK -> BUSINESS)
 
-EMPLOYEE(
-  employee_id PK, first_name, last_name, email UQ,
-  manager_id FK -> MANAGER
-)
+EMPLOYEE(employee_id PK, first_name, last_name, manager_id FK -> MANAGER)
 
-ADMIN(
-  admin_id PK, first_name, last_name
-)
+ADMIN(admin_id PK, first_name, last_name)
 
-DEFINES_ACCESS(
-  admin_id FK -> ADMIN, employee_id FK -> EMPLOYEE,
-  PK(admin_id, employee_id)
-)
+DEFINES_ACCESS(admin_id FK -> ADMIN, employee_id FK -> EMPLOYEE,
+  PK(admin_id, employee_id))
 
-ADMIN_PRIVILEGES(
-  admin_id FK -> ADMIN, privilege,
-  PK(admin_id, privilege)
-)
+ADMIN_PRIVILEGES(admin_id FK -> ADMIN, privilege, PK(admin_id, privilege))
+
+AUTH_ACCOUNT(account_id PK, email UQ, password_hash, role,
+  customer_id FK/UQ NULL, employee_id FK/UQ NULL,
+  manager_id FK/UQ NULL, admin_id FK/UQ NULL)
+
+CART(cart_id PK, customer_id FK/UQ -> CUSTOMER, created_at)
+
+CART_ITEM(cart_item_id PK, cart_id FK -> CART, equipment_id FK -> RENTAL_EQUIPMENT,
+  start_at, end_at, UQ(cart_id, equipment_id))
 ```
 
-## Data types and constraints
+The diagram is in [Corrected_Relational_Schema.svg](Corrected_Relational_Schema.svg) (source: `Corrected_Relational_Schema.mmd`).
 
-| Attributes | MySQL type |
-|---|---|
-| Entity primary keys | INT AUTO_INCREMENT |
-| Foreign keys | INT |
-| First and last names | VARCHAR(80) |
-| Business name | VARCHAR(120) |
-| Address | VARCHAR(255) |
-| Email | VARCHAR(254) |
-| Equipment type and privilege | VARCHAR(60) |
-| Status | VARCHAR(20) |
-| Checkout, due, and payment dates | DATE |
-| Payment amount | DECIMAL(10,2) |
+## Constraints and rules
 
-All columns are required. Names, addresses, emails, equipment types, and privileges cannot be blank. MySQL 8.4 enforces these rules with named CHECK constraints that use TRIM. Email is unique within each customer, manager, or employee table. A due date must be later than its checkout date, and a payment amount must be positive. Explicit FOREIGN KEY clauses reject records that refer to missing parents and prevent deleting a referenced parent.
+The database has 13 base tables, 13 primary keys, 16 foreign keys, 7 unique constraints, and 26 enforced CHECK constraints. The CHECKs forbid blank text, non-positive rates and payments, invalid statuses, rate units and roles, due times not after checkout times, times off the 30-minute grid, non-numeric card digits, and an AUTH_ACCOUNT row linked to anything other than the one person row its role requires. Foreign keys reject missing parents and deletion of referenced rows.
 
-Equipment status is AVAILABLE, MAINTENANCE, or RETIRED. AVAILABLE means the equipment is serviceable; its current booking is recorded separately in RESERVATION. Reservation status is RESERVED, CHECKED_OUT, RETURNED, or CANCELLED. The checkout date is the scheduled start of the rental.
+Two triggers on RESERVATION (`database/03_triggers.sql`) enforce rules CHECK constraints cannot express: a RESERVED row may not overlap another RESERVED row for the same equipment, equipment must be AVAILABLE, and day-rate items must be rented in whole 24-hour days. The interface re-checks these rules before booking so users get readable errors.
 
 ## Normalization
 
-**1NF:** Every column stores one value. Checkout and due dates are separate. Privileges are stored as individual rows rather than lists. The address is stored as one display value because this project does not search its individual parts.
+**1NF:** Every column holds one atomic value. Privileges are one row each, and cart contents are rows in CART_ITEM rather than lists. The address is a single display value because it is never searched by part.
 
-**2NF:** The eight entity tables have single-column primary keys. The two relationship tables have composite keys and no non-key attributes that could depend on only part of a key.
+**2NF:** Entity tables have single-column keys. DEFINES_ACCESS and ADMIN_PRIVILEGES have composite keys with no non-key attributes (privilege is part of the key), so no partial dependencies exist. CART_ITEM uses a surrogate key with a unique (cart_id, equipment_id) candidate key; its dates depend on the whole item.
 
-**3NF:** The non-key attributes depend on a candidate key without an extra dependency between non-key attributes in the same table. The duplicated business IDs have been removed from RESERVATION and EMPLOYEE. The duplicated manager ID has been removed from DEFINES_ACCESS. These values can be found with joins. Under the business rules above, the ten tables satisfy 3NF.
+**3NF:** Non-key attributes depend only on the key. Business is derived from equipment (RESERVATION) or manager (EMPLOYEE), and the manager of an access grant is derived from EMPLOYEE, so none of them are duplicated. A payment's amount and date depend on the payment, not on any reservation. Credentials live in AUTH_ACCOUNT rather than being repeated across four person tables. Totals, revenue, and counts shown in the interface are computed by queries (`reports.py`) and never stored.
 
-Two views, reservation_details and employee_details, show those joined values without storing them again.
+**Trade-off:** Because no price is stored per reservation, revenue in the aggregate reports is estimated from the equipment's current rate and the reserved duration; the exact amount charged is available per payment. Storing a price per reservation would be the extension if historical accuracy under rate changes mattered.
+
+Views `reservation_details` and `employee_details` expose the joined data without duplicating it.
+
+## Interface and aggregates
+
+- **Customers:** browse equipment, build a cart, check out with a card (last four digits stored), and view their rentals with a personal summary (rental count, estimated spend, status counts).
+- **Employees and managers:** see rentals for their own business, business-wide aggregates (rentals by status, estimated revenue, top equipment), and check out a customer for in-store rentals. Managers also manage their equipment and staff.
+- **Administrators:** browse every table, add, edit, and delete rows where permitted, and view system-wide aggregates (totals, revenue by business, status counts, top equipment, staff per business).
+
+All write actions are role-checked and protected by a CSRF token.
 
 ## Sample data
 
-The dataset represents October 21, 2026. The names, addresses, and gmail.com email addresses are synthetic.
-
 | Table | Records |
 |---|---:|
-| business | 20 |
-| rental_equipment | 40 |
-| customer | 30 |
+| business | 21 |
+| rental_equipment | 50 |
+| customer | 31 |
 | reservation | 40 |
 | payment | 30 |
 | manager | 20 |
@@ -119,12 +105,13 @@ The dataset represents October 21, 2026. The names, addresses, and gmail.com ema
 | admin | 20 |
 | defines_access | 40 |
 | admin_privileges | 40 |
-| Total | 300 |
+| cart | 0 |
+| cart_item | 0 |
+| auth_account | 91 |
+| Total | 403 |
 
-The verification script checks exact row counts, primary keys, foreign keys, unique constraints, enforced CHECK constraints, missing foreign-key references, duplicate payments, invalid dates and statuses, negative amounts, and duplicate access and privilege assignments. It also confirms that an unpaid reservation is allowed and that equipment can have more than one reservation over time. Trial changes are rolled back.
-
-The sample dates do not overlap for the same equipment item. Preventing future overlapping bookings is not enforced by this schema. Payment amounts are sample values because the original model does not include rental prices. The interface displays records and verifies a live MySQL connection; editing records and enforcing administrator permissions are outside this implementation.
+Names, addresses, and gmail.com addresses are synthetic. `verify_database.py` checks exact row counts, key and constraint counts, orphan rows, the triggers, and about two dozen rejected-invalid-data trials; every trial change is rolled back, and results are written to `submission/verification_results.json`.
 
 ## Screenshots
 
-The [submission screenshots](../submission/screenshots/) document the browser interface, populated tables, table pages, successful MySQL connection, and live row counts.
+The [submission screenshots](../submission/screenshots/) document the browser interface.

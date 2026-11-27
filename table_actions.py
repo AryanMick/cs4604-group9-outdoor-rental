@@ -1,4 +1,4 @@
-"""Record actions: insert_record is implemented; delete_record is still a shell."""
+"""Record actions: insert, update, and delete for allowlisted base tables."""
 from __future__ import annotations
 
 import db_tools
@@ -90,6 +90,60 @@ def insert_record(table: str, values: dict) -> int:
         # Duplicate keys, FK/CHECK failures, bad data types, and similar rejections.
         connection.rollback()
         raise ValueError(f"Could not insert into {table}: {exc.args[-1]}") from exc
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+
+def update_record(table: str, key_values: dict, values: dict) -> None:
+    """Update the columns in `values` on one row identified by its complete primary key.
+
+    Primary-key columns cannot be changed. A value of None sets the column to NULL.
+    Raises ValueError for bad input or constraint/FK violations.
+    """
+    if table not in TABLE_PRIMARY_KEYS:
+        raise ValueError(f"Unknown table: {table!r}")
+    primary_keys = TABLE_PRIMARY_KEYS[table]
+    if any(not str(key_values.get(column, "")).strip() for column in primary_keys):
+        raise ValueError(f"Primary-key value(s) required for {table}: {', '.join(primary_keys)}")
+    changes = {column: value for column, value in values.items() if column not in primary_keys}
+    if not changes:
+        raise ValueError("No values were provided to update.")
+
+    import pymysql
+
+    connection = db_tools.connect()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT COLUMN_NAME FROM information_schema.COLUMNS "
+                "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s",
+                (table,),
+            )
+            valid_columns = {row[0] for row in cursor.fetchall()}
+            unknown = [column for column in changes if column not in valid_columns]
+            if unknown:
+                raise ValueError(f"Unknown column(s) for {table}: {', '.join(map(str, unknown))}")
+
+            assignments = ", ".join(f"`{column}` = %s" for column in changes)
+            conditions = " AND ".join(f"`{column}` = %s" for column in primary_keys)
+            cursor.execute(
+                f"UPDATE `{table}` SET {assignments} WHERE {conditions}",
+                [*changes.values(), *(key_values[column] for column in primary_keys)],
+            )
+            if cursor.rowcount == 0:
+                cursor.execute(
+                    f"SELECT 1 FROM `{table}` WHERE {conditions}",
+                    [key_values[column] for column in primary_keys],
+                )
+                if cursor.fetchone() is None:
+                    raise ValueError("That record no longer exists.")
+        connection.commit()
+    except (pymysql.err.IntegrityError, pymysql.err.DataError, pymysql.err.OperationalError) as exc:
+        connection.rollback()
+        raise ValueError(f"Could not update {table}: {exc.args[-1]}") from exc
     except Exception:
         connection.rollback()
         raise
