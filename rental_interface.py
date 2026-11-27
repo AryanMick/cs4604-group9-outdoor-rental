@@ -908,17 +908,35 @@ def new_admin():
     flash("Successfully made a new admin account")
     return redirect(url_for("dashboard"))
 
+def _staff_form_options() -> dict:
+    """Business / manager choices (by name) for admins creating staff accounts."""
+    if not is_admin():
+        return {}
+    try:
+        return {
+            "businesses": reports._query("SELECT business_id, business_name FROM business ORDER BY business_name"),
+            "managers": reports._query(
+                "SELECT m.manager_id, CONCAT(m.first_name, ' ', m.last_name, ' - ', b.business_name) AS label "
+                "FROM manager m JOIN business b ON b.business_id = m.business_id ORDER BY b.business_name, m.last_name"),
+        }
+    except (RuntimeError, pymysql.MySQLError):
+        return {"businesses": [], "managers": []}
+
+
 @app.route("/new_employee", methods=["GET", "POST"])
 def new_employee():
-    deny_unless_manager()
+    deny_unless_elevated()
     if (request.method == "GET"):
-        return render_template("auth/new_employee.html")
+        return render_template("auth/new_employee.html", **_staff_form_options())
     
     email = request.form.get("email", "").strip().lower()
     password = request.form.get("password", "")
     first_name = request.form.get("first_name", "").strip()
     last_name = request.form.get("last_name", "").strip()
-    manager_id = session["role_id"]
+    manager_id = request.form.get("manager_id", type=int) if is_admin() else session["role_id"]
+    if not manager_id:
+        flash("Choose a manager.", "error")
+        return render_template("auth/new_employee.html", **_staff_form_options()), 400
     try:
         connection = db_tools.connect()
     except (RuntimeError, pymysql.MySQLError):
@@ -965,15 +983,18 @@ def new_employee():
 
 @app.route("/new_manager", methods=["GET", "POST"])
 def new_manager():
-    deny_unless_manager()
+    deny_unless_elevated()
     if (request.method == "GET"):
-        return render_template("auth/new_manager.html")
+        return render_template("auth/new_manager.html", **_staff_form_options())
     
     email = request.form.get("email", "").strip().lower()
     password = request.form.get("password", "")
     first_name = request.form.get("first_name", "").strip()
     last_name = request.form.get("last_name", "").strip()
-    business_id = session["business_id"]
+    business_id = request.form.get("business_id", type=int) if is_admin() else session["business_id"]
+    if not business_id:
+        flash("Choose a business.", "error")
+        return render_template("auth/new_manager.html", **_staff_form_options()), 400
     try:
         connection = db_tools.connect()
     except (RuntimeError, pymysql.MySQLError):
