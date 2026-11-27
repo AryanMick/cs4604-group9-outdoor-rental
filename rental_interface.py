@@ -455,7 +455,7 @@ def update_row(table: str):
     values = {
         name: value.strip() if value.strip() != "" else None
         for name, value in request.form.items()
-        if name != "csrf_token" and not name.startswith("key_")
+        if name not in ("csrf_token", "page") and not name.startswith("key_")
     }
     try:
         table_actions.update_record(table, key_values, values)

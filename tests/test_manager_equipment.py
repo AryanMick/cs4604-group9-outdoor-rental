@@ -199,7 +199,7 @@ class StaffAndAdminActionTests(unittest.TestCase):
     def test_admin_update_route_passes_key_and_nulls_blank_values(self):
         with self.client.session_transaction() as session:
             session.update(role="admin", csrf_token="tok")
-        form = {"csrf_token": "tok", "key_customer_id": "4", "first_name": "Ada", "last_name": " "}
+        form = {"csrf_token": "tok", "page": "2", "key_customer_id": "4", "first_name": "Ada", "last_name": " "}
         with patch.object(rental_interface.table_actions, "update_record") as update:
             response = self.client.post("/table/customer/update", data=form)
         self.assertEqual(response.status_code, 302)
