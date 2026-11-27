@@ -70,15 +70,15 @@
     <script>
       const editDialog = document.getElementById('edit-dialog');
       const columnNames = {{ columns|list|tojson }};
-      document.querySelectorAll('[data-edit-row]').forEach((button) => {
-        button.addEventListener('click', () => {
-          const cells = button.closest('tr').querySelectorAll('td');
-          columnNames.forEach((name, index) => {
-            const text = cells[index].textContent.trim();
-            document.getElementById('edit-' + name).value = text === 'NULL' ? '' : text;
-          });
-          editDialog.showModal();
+      document.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-edit-row]');
+        if (!button) return;
+        const cells = button.closest('tr').querySelectorAll('td');
+        columnNames.forEach((name, index) => {
+          const text = cells[index].textContent.trim();
+          document.getElementById('edit-' + name).value = text === 'NULL' ? '' : text;
         });
+        editDialog.showModal();
       });
       document.getElementById('edit-cancel').addEventListener('click', () => editDialog.close());
     </script>
